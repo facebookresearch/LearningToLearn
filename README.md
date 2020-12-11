@@ -9,6 +9,12 @@ conda activate ml3
 python setup.py develop
 ```
 
+In the LearningToLearn folder, follow the commands to store plots and data:
+
+```
+mkdir plots
+mkdir experiments/data
+```
 
 ## ML3 paper experiments and citation
 To reproduce results of the ML3 paper follow the instructions.

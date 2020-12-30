@@ -1,3 +1,4 @@
+# Copyright (c) Facebook, Inc. and its affiliates.
 import torch
 
 # The learned weighted cost, with fixed weights ###

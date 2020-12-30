@@ -166,7 +166,7 @@ if __name__ == '__main__':
     rest_pose = [0.0, 0.0, 0.0, 1.57079633, 0.0, 1.03672558, 0.0]
     joint_limits = [2.967,2.094,2.967,2.094,2.967,2.094,3.054]
 
-    robot_model = RobotModelTorch(rel_urdf_path='env/kuka_iiwa/urdf/iiwa7_ft_peg.urdf')
+    robot_model = RobotModelTorch(rel_urdf_path='env/kuka_iiwa/urdf/iiwa7_ft_with_obj_keypts.urdf')
     learned_u_seq = EnvWrapper(robot_model)
 
 

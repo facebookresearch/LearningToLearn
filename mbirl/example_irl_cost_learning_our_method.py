@@ -1,12 +1,14 @@
 import random
+import os
 import torch
 import numpy as np
 import higher
-from structured_kinematics.diff_kinematics import RobotModelTorch
-import logging;
+import mbirl
+
+from differentiable_robot_model import DifferentiableRobotModel
 
 from mbirl.learnable_costs import LearnableWeightedCost, LearnableTimeDepWeightedCost
-from mbirl.keypointMPC import KeypointMPCWrapper
+from mbirl.keypoint_mpc import KeypointMPCWrapper
 
 
 # The IRL Loss, the learning objective for the learnable cost functions.
@@ -64,8 +66,9 @@ if __name__ == '__main__':
 
     rest_pose = [0.0, 0.0, 0.0, 1.57079633, 0.0, 1.03672558, 0.0]
 
-    # Initialize the differentiable kinematics model of the Kuka arm
-    robot_model = RobotModelTorch(rel_urdf_path='env/kuka_iiwa/urdf/iiwa7_ft_peg.urdf')
+    rel_urdf_path = 'env/kuka_iiwa/urdf/iiwa7_ft_with_obj_keypts.urdf'
+    urdf_path = os.path.join(mbirl.__path__[0], rel_urdf_path)
+    robot_model = DifferentiableRobotModel(urdf_path=urdf_path, name="kuka_w_obj_keypts")
 
     #type of cost, either seq=time dependent or fixed
     # TODO: rename into weighted and timedepweighted ? something more descriptive

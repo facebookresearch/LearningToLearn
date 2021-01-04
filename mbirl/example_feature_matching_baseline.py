@@ -2,6 +2,7 @@ import os
 import random
 import numpy as np
 import torch
+import dill as pickle
 from differentiable_robot_model import DifferentiableRobotModel
 import logging; logging.disable(logging.CRITICAL);
 

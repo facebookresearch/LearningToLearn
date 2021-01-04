@@ -2,8 +2,10 @@ import os
 import random
 import numpy as np
 import torch
-from structured_kinematics.diff_kinematics import RobotModelTorch
+from differentiable_robot_model import DifferentiableRobotModel
 import logging; logging.disable(logging.CRITICAL);
+
+import mbirl
 
 import cvxpy as cp
 
@@ -166,7 +168,9 @@ if __name__ == '__main__':
     rest_pose = [0.0, 0.0, 0.0, 1.57079633, 0.0, 1.03672558, 0.0]
     joint_limits = [2.967,2.094,2.967,2.094,2.967,2.094,3.054]
 
-    robot_model = RobotModelTorch(rel_urdf_path='env/kuka_iiwa/urdf/iiwa7_ft_with_obj_keypts.urdf')
+    rel_urdf_path = 'env/kuka_iiwa/urdf/iiwa7_ft_with_obj_keypts.urdf'
+    urdf_path = os.path.join(mbirl.__path__[0], rel_urdf_path)
+    robot_model = DifferentiableRobotModel(urdf_path=urdf_path, name="kuka_w_obj_keypts")
     learned_u_seq = EnvWrapper(robot_model)
 
 

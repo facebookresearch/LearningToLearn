@@ -138,10 +138,6 @@ def irl_train(action_seq,expert_traj, current_traj, expert_features, learned_fea
 
             print("irl cost training iter: {} loss: {}".format(all_iter, target_loss_fn(pred_traj,target_traj).item()))
 
-
-
-
-
             # compute features extracted using current weights
             if params['features'] == 'pred-goals':
                 temp_features[:] += ((pred_traj[:-1, -9:]-target_traj[1:, -9:])**2).detach().numpy().astype(np.double)
@@ -183,7 +179,22 @@ if __name__ == '__main__':
         'time_horizon': 25
     }
 
-    expert_demo = torch.Tensor(np.load('expert_demo.npy'))
+    # expert_demo = torch.Tensor(np.load('expert_demo.npy'))
+
+    data_type = 'reaching'  # 'placing'
+    with open(f'traj_data/traj_data_{data_type}.pkl', 'rb') as f:
+        trajs = pickle.load(f)
+    if data_type == 'reaching':
+        traj = trajs[4]
+    else:
+        traj = trajs[0]
+
+    traj_len = len(traj['q'])
+
+    expert_demo = np.concatenate([traj['q'].reshape(traj_len, -1), traj['keypoints'].reshape(traj_len, -1)], axis=-1)
+    expert_demo = torch.Tensor(expert_demo)
+    print(expert_demo.shape)
+
     no_demos = 1
 
     avg_features = []

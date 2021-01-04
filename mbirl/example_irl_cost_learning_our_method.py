@@ -5,6 +5,7 @@ import torch
 import numpy as np
 import higher
 import mbirl
+import dill as pickle
 
 from differentiable_robot_model import DifferentiableRobotModel
 
@@ -24,38 +25,39 @@ class IRLLoss(object):
 def irl_training(learnable_cost, robot_model, irl_loss_fn, expert_demo, n_outer_iter, n_inner_iter):
 
     learnable_cost_opt = torch.optim.Adam(learnable_cost.parameters(), lr=1e-2)
+    keypoint_mpc_wrapper = KeypointMPCWrapper(robot_model)
+    action_optimizer = torch.optim.SGD(keypoint_mpc_wrapper.parameters(), lr=1.0)
+
+    irl_cost_eval = []
 
     for outer_i in range(n_outer_iter):
 
         learnable_cost_opt.zero_grad()
         # re-initialize action parameters for each outer iteration
-        keypoint_mpc_wrapper = KeypointMPCWrapper(robot_model)
-        action_optimizer = torch.optim.SGD(keypoint_mpc_wrapper.parameters(), lr=1.0)
 
-        for _ in range(n_inner_iter):
-            action_optimizer.zero_grad()
-            keypoint_mpc_wrapper.reset_actions()
-            with higher.innerloop_ctx(keypoint_mpc_wrapper, action_optimizer) as (fpolicy, diffopt):
-                start_pose = expert_demo[0,:7]
-                joint_state = torch.Tensor(start_pose)
-                pred_traj = fpolicy.roll_out(joint_state.clone())
+        start_pose = torch.Tensor(expert_demo[0, :7])
+
+        action_optimizer.zero_grad()
+        keypoint_mpc_wrapper.reset_actions()
+
+        with higher.innerloop_ctx(keypoint_mpc_wrapper, action_optimizer) as (fpolicy, diffopt):
+            for _ in range(n_inner_iter):
+                pred_traj = fpolicy.roll_out(start_pose.clone())
 
                 # use the learned loss to update the action sequence
                 learned_cost_val = learnable_cost(pred_traj, expert_demo[-1])
                 diffopt.step(learned_cost_val)
 
-                joint_state = torch.Tensor(start_pose)
-                pred_traj = fpolicy.roll_out(joint_state)
-                # compute task loss
-                irl_loss = irl_loss_fn(pred_traj, expert_demo).mean()
+            pred_traj = fpolicy.roll_out(start_pose)
+            # compute task loss
+            irl_loss = irl_loss_fn(pred_traj, expert_demo).mean()
 
-        if outer_i % 10 == 0:
-            print("irl cost training iter: {} loss: {}".format(outer_i, irl_loss.item()))
+            if outer_i % 10 == 0:
+                print("irl cost training iter: {} loss: {}".format(outer_i, irl_loss.item()))
 
-        # backprop gradient of learned cost parameters wrt irl loss
-        learnable_cost_opt.zero_grad()
-        learnable_cost.zero_grad()
-        irl_loss.backward(retain_graph=True)
+            # backprop gradient of learned cost parameters wrt irl loss
+            irl_loss.backward(retain_graph=True)
+            irl_cost_eval.append(irl_loss.detach())
 
         learnable_cost_opt.step()
 
@@ -75,7 +77,22 @@ if __name__ == '__main__':
     # TODO: rename into weighted and timedepweighted ? something more descriptive
     cost_type = 'seq' #'fixed'
 
-    expert_demo = torch.Tensor(np.load('expert_demo.npy'))
+    # expert_demo = torch.Tensor(np.load('expert_demo.npy'))
+
+    data_type = 'reaching'  # 'placing'
+    with open(f'traj_data/traj_data_{data_type}.pkl', 'rb') as f:
+        trajs = pickle.load(f)
+    if data_type == 'reaching':
+        traj = trajs[4]
+    else:
+        traj = trajs[0]
+
+    traj_len = len(traj['q'])
+
+    expert_demo = np.concatenate([traj['q'].reshape(traj_len, -1), traj['keypoints'].reshape(traj_len, -1)], axis=-1)
+    expert_demo = torch.Tensor(expert_demo)
+    print(expert_demo.shape)
+
     learned_cost = None
 
     if cost_type=='fixed':

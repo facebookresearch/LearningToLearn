@@ -24,17 +24,17 @@ class GroundTruthForwardModel(torch.nn.Module):
         xdesired = x + u
 
         keypoints = []
-        for link in [1,2,3]:
-            kp_pos, kp_rot = self.robot_model.compute_forward_kinematics(xdesired, 'kp_link_'+str(link))
-            keypoints+=kp_pos
+        for link in [1, 2, 3]:
+            kp_pos, kp_rot = self.robot_model.compute_forward_kinematics(xdesired, 'kp_link_' + str(link))
+            keypoints += kp_pos
 
         return torch.stack(keypoints).squeeze()
 
     def forward_kin(self, x):
         keypoints = []
-        for link in [1,2,3]:
-            kp_pos, kp_rot  = self.robot_model.compute_forward_kinematics(x, 'kp_link_'+str(link))
-            keypoints+=kp_pos
+        for link in [1, 2, 3]:
+            kp_pos, kp_rot = self.robot_model.compute_forward_kinematics(x, 'kp_link_' + str(link))
+            keypoints += kp_pos
 
         return torch.stack(keypoints).squeeze()
 
@@ -67,35 +67,36 @@ class ActionNetwork(torch.nn.Module):
         return torch.stack(qs), torch.stack(key_pos)
 
 
-def generate_demo_traj(rest_pose, goal_ee1,goal_ee2,policy):
+def generate_demo_traj(rest_pose, goal_ee1, goal_ee2, policy):
     joint_state = rest_pose
     for epoch in range(100):
         qs, key_pos = policy.roll_out(joint_state.clone())
-        loss = ((key_pos[1:12,-3:]-torch.Tensor(goal_ee1))**2).mean(dim=0) + ((key_pos[12:,-3:]-torch.Tensor(goal_ee2))**2 ).mean(dim=0)
-        loss = loss.mean() + (policy.action**2).mean()
+        loss = ((key_pos[1:12, -3:] - torch.Tensor(goal_ee1)) ** 2).mean(dim=0) + (
+                    (key_pos[12:, -3:] - torch.Tensor(goal_ee2)) ** 2).mean(dim=0)
+        loss = loss.mean() + (policy.action ** 2).mean()
         policy.optimizer.zero_grad()
         loss.backward(retain_graph=True)
         policy.optimizer.step()
-    print('keypoint',key_pos[11,-3:])
-    print('goal1',goal_ee1)
+    print('keypoint', key_pos[11, -3:])
+    print('goal1', goal_ee1)
     print('keypoint', key_pos[-1, -3:])
     print('goal2', goal_ee2)
 
-    #collect trajectory info
+    # collect trajectory info
     qs, key_pos = policy.roll_out(joint_state.clone())
-    print('roll_out',key_pos[-1,-3:])
-    return qs.detach().numpy(),key_pos.detach().numpy(), policy.action.detach().numpy()
+    print('roll_out', key_pos[-1, -3:])
+    return qs.detach().numpy(), key_pos.detach().numpy(), policy.action.detach().numpy()
 
 
-def visualize_traj(traj_data,robot_id,sim):
+def visualize_traj(traj_data, robot_id, sim):
     qs = traj_data['q'].squeeze()
     print(qs.shape)
     for q in qs:
         for i in range(7):
             sim.resetJointState(bodyUniqueId=robot_id,
-                              jointIndex=i,
-                              targetValue=q[i],
-                              targetVelocity=0)
+                                jointIndex=i,
+                                targetValue=q[i],
+                                targetVelocity=0)
         sim.stepSimulation()
 
         time.sleep(0.2)
@@ -119,10 +120,12 @@ if __name__ == '__main__':
     rest_pose = torch.Tensor(rest_pose).unsqueeze(dim=0)
     cur_ee = dmodel.forward_kin(rest_pose)
 
-    print(cur_ee)
-    data_type = 'reaching'
+    data_type = 'reaching' #'placing'
 
     generate_new_data = False
+
+    if not os.path.exists(f'traj_data'):
+        os.makedirs('traj_data')
 
     if generate_new_data or not os.path.exists(f'traj_data/traj_data_{data_type}.pkl'):
         print('cur_ee', cur_ee[-3:])
@@ -145,7 +148,7 @@ if __name__ == '__main__':
                     goal_ee1 = goal_ee2.clone()
                 else:
                     goal_ee2 = goal_ee1.clone()
-            qs,keypoints,actions = generate_demo_traj(rest_pose,goal_ee1,goal_ee2,policy)
+            qs, keypoints, actions = generate_demo_traj(rest_pose, goal_ee1, goal_ee2, policy)
             traj_data['q'] = qs
             traj_data['keypoints'] = keypoints
             traj_data['actions'] = actions
@@ -160,17 +163,20 @@ if __name__ == '__main__':
         trajs = pickle.load(f)
 
     n_trajs = len(trajs)
-    n_trajs_sqrt = np.sqrt(n_trajs)
-    if n_trajs_sqrt**2 < n_trajs:
+    n_trajs_sqrt = int(np.sqrt(n_trajs))
+    if n_trajs_sqrt ** 2 < n_trajs:
         n_trajs_sqrt += 1
 
-    fig = plt.figure(figsize=(n_trajs_sqrt**2, n_trajs_sqrt**2))
+    fig = plt.figure(figsize=(n_trajs_sqrt ** 2, n_trajs_sqrt ** 2))
     for i, traj in enumerate(trajs):
-        ax = fig.add_subplot(n_trajs_sqrt, n_trajs_sqrt, i+1, projection='3d')
+        ax = fig.add_subplot(n_trajs_sqrt, n_trajs_sqrt, i + 1, projection='3d')
         ax.plot(trajs[i]['keypoints'][1:, 0, 0], trajs[i]['keypoints'][1:, 0, 1], trajs[i]['keypoints'][1:, 0, 2])
-        ax.scatter(trajs[i]['keypoints'][1:, 0, 0], trajs[i]['keypoints'][1:, 0, 1], trajs[i]['keypoints'][1:, 0, 2], color='blue')
-        ax.scatter(trajs[i]['keypoints'][1, 0, 0], trajs[i]['keypoints'][1, 0, 1], trajs[i]['keypoints'][1, 0, 2], color='red')
-        ax.scatter(trajs[i]['keypoints'][-1, 0, 0], trajs[i]['keypoints'][-1, 0, 1], trajs[i]['keypoints'][-1, 0, 2], color='green')
+        ax.scatter(trajs[i]['keypoints'][1:, 0, 0], trajs[i]['keypoints'][1:, 0, 1], trajs[i]['keypoints'][1:, 0, 2],
+                   color='blue')
+        ax.scatter(trajs[i]['keypoints'][1, 0, 0], trajs[i]['keypoints'][1, 0, 1], trajs[i]['keypoints'][1, 0, 2],
+                   color='red')
+        ax.scatter(trajs[i]['keypoints'][-1, 0, 0], trajs[i]['keypoints'][-1, 0, 1], trajs[i]['keypoints'][-1, 0, 2],
+                   color='green')
         range_x = trajs[i]['keypoints'][1:, 0, 0].max() - trajs[i]['keypoints'][1:, 0, 0].min()
         range_y = trajs[i]['keypoints'][1:, 0, 1].max() - trajs[i]['keypoints'][1:, 0, 1].min()
         range_z = trajs[i]['keypoints'][1:, 0, 2].max() - trajs[i]['keypoints'][1:, 0, 2].min()
@@ -178,7 +184,6 @@ if __name__ == '__main__':
         ax.set_xlim([trajs[i]['keypoints'][1:, 0, 0].min(), trajs[i]['keypoints'][1:, 0, 0].min() + range])
         ax.set_ylim([trajs[i]['keypoints'][1:, 0, 1].min(), trajs[i]['keypoints'][1:, 0, 1].min() + range])
         ax.set_zlim([trajs[i]['keypoints'][1:, 0, 2].min(), trajs[i]['keypoints'][1:, 0, 2].min() + range])
+        ax.set_title(f"Trajectory {i}")
 
     plt.savefig(f'traj_data/traj_data_{data_type}.png')
-
-

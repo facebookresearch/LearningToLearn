@@ -93,12 +93,12 @@ if __name__ == '__main__':
     expert_demo = torch.Tensor(expert_demo)
     print(expert_demo.shape)
 
-    learned_cost = None
+    learnable_cost = None
 
     if cost_type=='fixed':
-        learned_cost = LearnableWeightedCost()
+        learnable_cost = LearnableWeightedCost()
     elif cost_type == 'seq':
-        learned_cost = LearnableTimeDepWeightedCost()
+        learnable_cost = LearnableTimeDepWeightedCost()
     else:
         print('Cost not implemented')
 
@@ -107,4 +107,4 @@ if __name__ == '__main__':
     n_outer_iter = 200
     n_inner_iter = 1
     time_horizon = 25
-    irl_training(learned_cost, robot_model, irl_loss_fn, expert_demo, n_outer_iter, n_inner_iter)
+    irl_training(learnable_cost, robot_model, irl_loss_fn, expert_demo, n_outer_iter, n_inner_iter)

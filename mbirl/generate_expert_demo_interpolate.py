@@ -67,17 +67,16 @@ class ActionNetwork(torch.nn.Module):
         return torch.stack(qs), torch.stack(key_pos)
 
 
-def generate_demo_traj(rest_pose, goal_ee1, goal_ee2, policy):
+def generate_demo_traj(rest_pose, goal_ee, policy):
     joint_state = rest_pose
     for epoch in range(100):
         qs, key_pos = policy.roll_out(joint_state.clone())
-        loss = ((key_pos[1:12, -3:] - torch.Tensor(goal_ee1)) ** 2).mean(dim=0) + (
-                    (key_pos[12:, -3:] - torch.Tensor(goal_ee2)) ** 2).mean(dim=0)
+        loss = ((key_pos[1:, -3:] - torch.Tensor(goal_ee)) ** 2).mean(dim=0)
         loss = loss.mean() + (policy.action ** 2).mean()
         policy.optimizer.zero_grad()
         loss.backward(retain_graph=True)
         policy.optimizer.step()
-    print('keypoint', key_pos[11, -3:])
+    print('keypoint', key_pos[12, -3:])
     print('goal1', goal_ee1)
     print('keypoint', key_pos[-1, -3:])
     print('goal2', goal_ee2)
@@ -98,10 +97,40 @@ def visualize_traj(traj_data, robot_id, sim):
                                 targetValue=q[i],
                                 targetVelocity=0)
         if j == 0:
+            print(q)
+            cur_ee = dmodel.forward_kin(torch.Tensor(q).unsqueeze(dim=0))
+            print(cur_ee)
             time.sleep(0.2)
         sim.stepSimulation()
 
         time.sleep(1.0)
+
+
+def show_goal_trajectory(goal_ee_list, data_type, save=True):
+    fig = plt.figure(figsize=(10, 30))
+    for i in range(3):
+        ax = fig.add_subplot(1, 3, i + 1, projection='3d')
+        ax.plot(goal_ee_list[:, i, 0], goal_ee_list[:, i, 1], goal_ee_list[:, i, 2])
+        ax.scatter(goal_ee_list[:, i, 0], goal_ee_list[:, i, 1], goal_ee_list[:, i, 2],
+                   color='blue')
+        ax.scatter(goal_ee_list[0, i, 0], goal_ee_list[0, i, 1], goal_ee_list[0, i, 2],
+                   color='red')
+        ax.scatter(goal_ee_list[-1, i, 0], goal_ee_list[-1, i, 1], goal_ee_list[-1, i, 2],
+                   color='green')
+        range_x = goal_ee_list[:, i, 0].max() - goal_ee_list[:, i, 0].min()
+        range_y = goal_ee_list[:, i, 1].max() - goal_ee_list[:, i, 1].min()
+        range_z = goal_ee_list[:, i, 2].max() - goal_ee_list[:, i, 2].min()
+        max_range = max(range_x, range_y, range_z)
+        ax.set_xlim([goal_ee_list[:, i, 0].min(), goal_ee_list[:, i, 0].min() + max_range])
+        ax.set_ylim([goal_ee_list[:, i, 1].min(), goal_ee_list[:, i, 1].min() + max_range])
+        ax.set_zlim([goal_ee_list[:, i, 2].min(), goal_ee_list[:, i, 2].min() + max_range])
+        ax.set_title(f"Trajectory {i}")
+
+    plt.tight_layout()
+    if save:
+        plt.savefig(f"traj_data/traj_goal_{data_type}.png")
+    else:
+        plt.show()
 
 
 if __name__ == '__main__':
@@ -120,9 +149,17 @@ if __name__ == '__main__':
 
     rest_pose = [0.0, 0.0, 0.0, 1.57079633, 0.0, 1.03672558, 0.0]
     rest_pose = torch.Tensor(rest_pose).unsqueeze(dim=0)
-    cur_ee = dmodel.forward_kin(rest_pose)
 
-    data_type = 'reaching' #'placing'
+    # update kinematic state
+    _ = dmodel.forward_kin(rest_pose)
+
+    cur_ee = dmodel.forward_kin(rest_pose)
+    print(f"cur_ee: {cur_ee}")
+
+    keypt_centroid = cur_ee.mean(dim=0)
+    print(f"keypt_centroid: {keypt_centroid}")
+
+    data_type = 'placing'  #'reaching'
 
     generate_new_data = False
 
@@ -130,30 +167,35 @@ if __name__ == '__main__':
         os.makedirs('traj_data')
 
     if generate_new_data or not os.path.exists(f'traj_data/traj_data_{data_type}.pkl'):
-        print('cur_ee', cur_ee[-3:])
         trajectories = []
-        for _ in range(1):
-            print(_)
+        for traj_it in range(6):
+            print(traj_it)
             traj_data = {}
             policy = ActionNetwork(dmodel)
             goal_ee1 = cur_ee[-3:].clone()
-            if data_type == 'reaching':
-                multiplier = 2
-            else:
-                multiplier = 1
-            goal_ee1[:, 0] = goal_ee1[:, 0] + multiplier * torch.Tensor(np.random.uniform(-0.3, 0.3, 1))
+            goal_ee1[:, 0] = goal_ee1[:, 0] + torch.Tensor(np.random.uniform(-0.4, -0.3, 1))
             goal_ee2 = goal_ee1.clone()
-            goal_ee2[:, 2] = goal_ee2[:, 2] + multiplier * torch.Tensor(np.random.uniform(-0.4, 0.0, 1))
+            goal_ee2[:, 2] = goal_ee2[:, 2] + torch.Tensor(np.random.uniform(-0.5, -0.4, 1))
+
             if data_type == 'reaching':
-                chosen_goal = np.random.choice([1, 2])
-                if chosen_goal == 2:
-                    goal_ee1 = goal_ee2.clone()
+                goal_ee_list = torch.stack([cur_ee.clone() for i in range(25)])
+            else:
+                goal_ee_list = torch.stack([cur_ee.clone() for i in range(12)] + [goal_ee1.clone() for i in range(13)])
+            for i in range(3):
+                if data_type == 'reaching':
+                    goal_ee_list[:, i, 0] = torch.linspace(cur_ee[i, 0], goal_ee1[i, 0], 25)
                 else:
-                    goal_ee2 = goal_ee1.clone()
-            qs, keypoints, actions = generate_demo_traj(rest_pose, goal_ee1, goal_ee2, policy)
+                    goal_ee_list[:12, i, 0] = torch.linspace(cur_ee[i, 0], goal_ee1[i, 0], 12)
+                    goal_ee_list[12:, i, 2] = torch.linspace(goal_ee1[i, 2], goal_ee2[i, 2], 13)
+
+            # print(goal_ee_list)
+            # show_goal_trajectory(goal_ee_list, data_type, save=True)
+
+            qs, keypoints, actions = generate_demo_traj(rest_pose, goal_ee_list, policy)
             traj_data['q'] = qs
             traj_data['keypoints'] = keypoints
             traj_data['actions'] = actions
+            traj_data['desired'] = goal_ee_list
             trajectories.append(traj_data)
 
         with open(f'traj_data/traj_data_{data_type}.pkl', "wb") as fp:
@@ -170,11 +212,16 @@ if __name__ == '__main__':
         n_trajs_sqrt += 1
 
     fig = plt.figure(figsize=(n_trajs_sqrt ** 2, n_trajs_sqrt ** 2))
+    if n_trajs_sqrt == 1:
+        fig = plt.figure()
     for i, traj in enumerate(trajs):
         ax = fig.add_subplot(n_trajs_sqrt, n_trajs_sqrt, i + 1, projection='3d')
         ax.plot(trajs[i]['keypoints'][1:, 0, 0], trajs[i]['keypoints'][1:, 0, 1], trajs[i]['keypoints'][1:, 0, 2])
         ax.scatter(trajs[i]['keypoints'][1:, 0, 0], trajs[i]['keypoints'][1:, 0, 1], trajs[i]['keypoints'][1:, 0, 2],
                    color='blue')
+        ax.plot(trajs[i]['desired'][:, 0, 0], trajs[i]['desired'][:, 0, 1], trajs[i]['desired'][:, 0, 2], color='orange')
+        ax.scatter(trajs[i]['desired'][:, 0, 0], trajs[i]['desired'][:, 0, 1], trajs[i]['desired'][:, 0, 2],
+                   color='orange')
         ax.scatter(trajs[i]['keypoints'][1, 0, 0], trajs[i]['keypoints'][1, 0, 1], trajs[i]['keypoints'][1, 0, 2],
                    color='red')
         ax.scatter(trajs[i]['keypoints'][-1, 0, 0], trajs[i]['keypoints'][-1, 0, 1], trajs[i]['keypoints'][-1, 0, 2],
@@ -188,9 +235,12 @@ if __name__ == '__main__':
         ax.set_zlim([trajs[i]['keypoints'][1:, 0, 2].min(), trajs[i]['keypoints'][1:, 0, 2].min() + max_range])
         ax.set_title(f"Trajectory {i}")
 
+    plt.tight_layout()
     plt.savefig(f'traj_data/traj_data_{data_type}.png')
+    plt.show()
 
     # pybullet visualization
+
     rel_urdf_path = 'env/kuka_iiwa/urdf/iiwa7_ft_with_obj_keypts.urdf'
     urdf_path = os.path.join(mbirl.__path__[0], rel_urdf_path)
     robot_model = DifferentiableRobotModel(urdf_path=urdf_path, name="kuka_w_obj_keypts")
@@ -208,9 +258,7 @@ if __name__ == '__main__':
     # with the same robot model if joint damping is not zero
     for link_idx in range(8):
         sim.changeDynamics(robot_id, link_idx, linearDamping=0.0, angularDamping=0.0, jointDamping=0.0)
-        # p.changeDynamics(robot_id, link_idx, linearDamping=0.0, angularDamping=0.0)
         sim.changeDynamics(robot_id, link_idx, maxJointVelocity=200)
 
     for traj_data in trajs:
-
         visualize_traj(traj_data, robot_id, sim)

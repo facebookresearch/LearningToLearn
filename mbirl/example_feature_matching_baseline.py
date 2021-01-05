@@ -13,10 +13,9 @@ import mbirl
 
 import cvxpy as cp
 
-##Code adapted from:  https://github.com/reinforcement-learning-kr/lets-do-irl
-
 
 class QPoptimizer(object):
+    # Code adapted from:  https://github.com/reinforcement-learning-kr/lets-do-irl
     def __call__(self, feature_num, learner, expert):
         w = cp.Variable(feature_num)
         obj_func = cp.Minimize(cp.norm(w))
@@ -32,6 +31,7 @@ class QPoptimizer(object):
         else:
             weights = np.zeros(feature_num)
             return weights, prob.status
+
 
 class IRLLoss(object):
     def __call__(self, pred_traj, target_traj):

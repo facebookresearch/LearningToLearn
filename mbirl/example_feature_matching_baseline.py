@@ -52,12 +52,13 @@ def extract_feature_expectations(keypoint_trajectory, goal_keypts):
     return exp_feat
 
 
-def irl_training(learnable_cost, robot_model, irl_loss_fn, expert_demo, n_outer_iter, n_inner_iter):
+def irl_training(robot_model, irl_loss_fn, expert_demo, n_outer_iter, n_inner_iter):
 
     irl_losses = []
 
     cost_optimizer = QPoptimizer()
     keypoint_mpc_wrapper = KeypointMPCWrapper(robot_model)
+    action_optimizer = torch.optim.SGD(keypoint_mpc_wrapper.parameters(), lr=0.001)
 
     start_joint_state = expert_demo[0, :7].clone()
     goal_keypts = expert_demo[-1, -9:].clone()
@@ -77,11 +78,11 @@ def irl_training(learnable_cost, robot_model, irl_loss_fn, expert_demo, n_outer_
 
     for outer_iter in range(n_outer_iter):
 
-        keypoint_mpc_wrapper = KeypointMPCWrapper(robot_model)
-        action_optimizer = torch.optim.SGD(keypoint_mpc_wrapper.parameters(), lr=0.001)
-
         weight = torch.Tensor(W)
+        # we reset the actions to optimize new action sequence from scratch with the new learned weights
+        keypoint_mpc_wrapper.reset_actions()
 
+        # we use the current "reward/cost" weight vector to optimize an action sequence
         for idx in range(10):
 
             # unroll and extract expected features
@@ -96,11 +97,14 @@ def irl_training(learnable_cost, robot_model, irl_loss_fn, expert_demo, n_outer_
             cost.backward(retain_graph=True)
             action_optimizer.step()
 
+        # compute optimal weights with convex optimization (Abbeel et al.)
+        W, _ = cost_optimizer(len(expert_features), expert_features, phi)
+
+        # compute irl loss, solely for comparing to our method
         irl_losses.append(irl_loss_fn(pred_traj, expert_demo).item())
         print("irl loss outer iter: {} loss: {}".format(outer_iter, irl_losses[-1]))
 
-        # compute optimal weights with convex optimization (Abbeel et al.)
-        W, _ = cost_optimizer(len(expert_features), expert_features, phi)
+        # check convergence
         hyper_distance = np.abs(np.dot(W, expert_features.detach()-phi.detach())) #hyperdistance = t
         if hyper_distance <= params['epsilon']: # terminate if the point reached close enough
             break
@@ -144,8 +148,7 @@ if __name__ == '__main__':
     # compare progress to our algorithm
     irl_loss_fn = IRLLoss()
 
-    learnable_cost = LearnableWeightedCost()
 
-    irl_training(learnable_cost, robot_model, irl_loss_fn, expert_demo, n_outer_iter=200, n_inner_iter=1)
+    irl_training(robot_model, irl_loss_fn, expert_demo, n_outer_iter=200, n_inner_iter=1)
 
 

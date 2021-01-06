@@ -2,7 +2,7 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 
-for data_type in ['reaching', 'placing']:
+for data_type in ['placing']:
 
     baseline = torch.load(f"model_data/{data_type}_Abbeel")
     timedep = torch.load(f"model_data/{data_type}_TimeDep")

@@ -100,7 +100,7 @@ def irl_training(robot_model, irl_loss_fn, expert_demo, test_trajs, n_outer_iter
 
     cost_optimizer = QPoptimizer()
     keypoint_mpc_wrapper = KeypointMPCWrapper(robot_model)
-    action_optimizer = torch.optim.SGD(keypoint_mpc_wrapper.parameters(), lr=0.001)
+    action_optimizer = torch.optim.SGD(keypoint_mpc_wrapper.parameters(), lr=0.0001)
 
     start_joint_state = expert_demo[0, :7].clone()
     goal_keypts = expert_demo[-1, -9:].clone()
@@ -125,7 +125,7 @@ def irl_training(robot_model, irl_loss_fn, expert_demo, test_trajs, n_outer_iter
         keypoint_mpc_wrapper.reset_actions()
 
         # we use the current "reward/cost" weight vector to optimize an action sequence
-        for idx in range(10):
+        for idx in range(n_inner_iter):
 
             # unroll and extract expected features
             pred_traj = keypoint_mpc_wrapper.roll_out(start_joint_state.clone())
@@ -181,9 +181,12 @@ if __name__ == '__main__':
     with open(f'traj_data/traj_data_{data_type}.pkl', 'rb') as f:
         trajs = pickle.load(f)
     if data_type == 'reaching':
-        traj = trajs[4]
+        traj = trajs[0]
     else:
         traj = trajs[0]
+
+    #traj = np.load('mbirl/expert_demo.npy')
+    #print(traj)
 
     traj_len = len(traj['q'])
 

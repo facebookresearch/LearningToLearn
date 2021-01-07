@@ -1,12 +1,20 @@
+import sys
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
+from os.path import dirname, abspath
+import os
 
-for data_type in ['placing']:
+_ROOT_DIR = dirname(abspath(__file__))
+sys.path.append(_ROOT_DIR)
 
-    baseline = torch.load(f"model_data/{data_type}_Abbeel")
-    timedep = torch.load(f"model_data/{data_type}_TimeDep")
-    weighted = torch.load(f"model_data/{data_type}_Weighted")
+model_data_dir = os.path.join(_ROOT_DIR, 'model_data')
+
+for data_type in ['placing', 'reaching']:
+
+    baseline = torch.load(f"{model_data_dir}/{data_type}_Abbeel")
+    timedep = torch.load(f"{model_data_dir}/{data_type}_TimeDep")
+    weighted = torch.load(f"{model_data_dir}/{data_type}_Weighted")
 
     # IRL Cost
 
@@ -19,7 +27,7 @@ for data_type in ['placing']:
     plt.ylabel("IRL Cost")
     plt.legend()
 
-    plt.savefig(f"model_data/{data_type}_IRL_cost.png")
+    plt.savefig(f"{model_data_dir}/{data_type}_IRL_cost.png")
 
     # Eval
     plt.figure()
@@ -42,4 +50,4 @@ for data_type in ['placing']:
     plt.ylabel("IRL Cost")
     plt.legend()
 
-    plt.savefig(f"model_data/{data_type}_Eval.png")
+    plt.savefig(f"{model_data_dir}/{data_type}_Eval.png")

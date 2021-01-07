@@ -1,13 +1,20 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 import random
-import os
+import os, sys
 import torch
 import numpy as np
 import higher
 import mbirl
 import dill as pickle
+from os.path import dirname, abspath
 
 from differentiable_robot_model import DifferentiableRobotModel
+
+_ROOT_DIR = dirname(abspath(__file__))
+sys.path.append(_ROOT_DIR)
+
+traj_data_dir = os.path.join(_ROOT_DIR, 'traj_data')
+model_data_dir = os.path.join(_ROOT_DIR, 'model_data')
 
 from mbirl.learnable_costs import LearnableWeightedCost, LearnableTimeDepWeightedCost
 from mbirl.keypoint_mpc import KeypointMPCWrapper
@@ -125,8 +132,9 @@ if __name__ == '__main__':
     urdf_path = os.path.join(mbirl.__path__[0], rel_urdf_path)
     robot_model = DifferentiableRobotModel(urdf_path=urdf_path, name="kuka_w_obj_keypts")
 
-    data_type = 'reaching'  # 'placing'
-    with open(f'traj_data/traj_data_{data_type}.pkl', 'rb') as f:
+    # data_type = 'reaching'
+    data_type = 'placing'
+    with open(f'{traj_data_dir}/traj_data_{data_type}.pkl', 'rb') as f:
         trajs = pickle.load(f)
     if data_type == 'reaching':
         traj = trajs[0]
@@ -140,7 +148,8 @@ if __name__ == '__main__':
     print(expert_demo.shape)
 
     # type of cost
-    cost_type = 'TimeDep'  # 'fixed'
+    cost_type = 'TimeDep'
+    # cost_type = 'Weighted'
 
     learnable_cost = None
 
@@ -156,14 +165,15 @@ if __name__ == '__main__':
     n_outer_iter = 5 #200
     n_inner_iter = 1
     time_horizon = 25
+    n_test_traj = 1
     irl_cost_tr, irl_cost_eval, learnable_cost_params = irl_training(learnable_cost, robot_model, irl_loss_fn,
-                                                                     expert_demo, trajs[1:], n_outer_iter, n_inner_iter)
+                                                                     expert_demo, trajs[1:1+n_test_traj], n_outer_iter, n_inner_iter)
 
-    if not os.path.exists('model_data'):
-        os.makedirs('model_data')
+    if not os.path.exists(model_data_dir):
+        os.makedirs(model_data_dir)
 
     torch.save({
         'irl_cost_tr': irl_cost_tr,
         'irl_cost_eval': irl_cost_eval,
         'cost_parameters': learnable_cost_params
-    }, f=f'model_data/{data_type}_{cost_type}')
+    }, f=f'{model_data_dir}/{data_type}_{cost_type}')

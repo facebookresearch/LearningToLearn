@@ -128,7 +128,7 @@ if __name__ == '__main__':
     rest_pose = torch.Tensor(rest_pose).unsqueeze(dim=0)
     cur_ee = dmodel.forward_kin(rest_pose)
 
-    data_type = 'reaching'  # 'placing'
+    data_type = 'placing'  # 'placing'
 
     generate_new_data = False
 
@@ -229,5 +229,5 @@ if __name__ == '__main__':
         # p.changeDynamics(robot_id, link_idx, linearDamping=0.0, angularDamping=0.0)
         sim.changeDynamics(robot_id, link_idx, maxJointVelocity=200)
 
-    for traj_data in trajs:
-        visualize_traj(traj_data, robot_id, sim)
+    # for traj_data in trajs:
+    #     visualize_traj(traj_data, robot_id, sim)

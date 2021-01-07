@@ -184,7 +184,7 @@ if __name__ == '__main__':
     }
 
     # data_type = 'reaching'
-    data_type = 'placing'
+    data_type = 'reaching'
     with open(f'{traj_data_dir}/traj_data_{data_type}.pkl', 'rb') as f:
         trajs = pickle.load(f)
     if data_type == 'reaching':
@@ -207,7 +207,7 @@ if __name__ == '__main__':
     # compare progress to our algorithm
     irl_loss_fn = IRLLoss()
 
-    n_outer_iter = 5 #200
+    n_outer_iter = 20 #200
     n_inner_iter = 1
     time_horizon = 25
     n_test_traj = 1

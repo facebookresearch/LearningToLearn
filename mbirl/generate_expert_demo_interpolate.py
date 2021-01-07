@@ -268,5 +268,5 @@ if __name__ == '__main__':
         sim.changeDynamics(robot_id, link_idx, linearDamping=0.0, angularDamping=0.0, jointDamping=0.0)
         sim.changeDynamics(robot_id, link_idx, maxJointVelocity=200)
 
-    for traj_data in trajs:
-        visualize_traj(traj_data, robot_id, sim)
+    # for traj_data in trajs:
+    #     visualize_traj(traj_data, robot_id, sim)

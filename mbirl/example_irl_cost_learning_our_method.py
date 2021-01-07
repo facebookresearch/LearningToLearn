@@ -16,6 +16,8 @@ sys.path.append(_ROOT_DIR)
 traj_data_dir = os.path.join(_ROOT_DIR, 'traj_data')
 model_data_dir = os.path.join(_ROOT_DIR, 'model_data')
 
+os.environ['KMP_DUPLICATE_LIB_OK']='True'
+
 from mbirl.learnable_costs import LearnableWeightedCost, LearnableTimeDepWeightedCost
 from mbirl.keypoint_mpc import KeypointMPCWrapper
 
@@ -133,7 +135,7 @@ if __name__ == '__main__':
     robot_model = DifferentiableRobotModel(urdf_path=urdf_path, name="kuka_w_obj_keypts")
 
     # data_type = 'reaching'
-    data_type = 'placing'
+    data_type = 'reaching'
     with open(f'{traj_data_dir}/traj_data_{data_type}.pkl', 'rb') as f:
         trajs = pickle.load(f)
     if data_type == 'reaching':
@@ -148,7 +150,7 @@ if __name__ == '__main__':
     print(expert_demo.shape)
 
     # type of cost
-    cost_type = 'TimeDep'
+    cost_type = 'Weighted'
     # cost_type = 'Weighted'
 
     learnable_cost = None
@@ -162,7 +164,7 @@ if __name__ == '__main__':
 
     irl_loss_fn = IRLLoss()
 
-    n_outer_iter = 5 #200
+    n_outer_iter = 20
     n_inner_iter = 1
     time_horizon = 25
     n_test_traj = 1

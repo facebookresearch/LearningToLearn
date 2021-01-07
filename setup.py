@@ -18,13 +18,4 @@ setup(
     zip_safe=False,
 )
 
-setup(
-    name="mbirl",
-    author="Facebook AI Research",
-    author_email="",
-    version=1.0,
-    packages=find_packages(),
-    install_requires=install_requires,
-    include_package_data=True,
-    zip_safe=False,
-)
+

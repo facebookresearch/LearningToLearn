@@ -140,7 +140,7 @@ if __name__ == '__main__':
     print(expert_demo.shape)
 
     # type of cost
-    cost_type = 'Weighted'  # 'fixed'
+    cost_type = 'TimeDep'  # 'fixed'
 
     learnable_cost = None
 

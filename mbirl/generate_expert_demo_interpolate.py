@@ -168,12 +168,12 @@ if __name__ == '__main__':
     # data_type = 'reaching'
     data_type = 'placing'
 
-    generate_new_data = False
+    regenerate_data = False
 
     if not os.path.exists(traj_data_dir):
         os.makedirs(traj_data_dir)
 
-    if generate_new_data or not os.path.exists(f'{traj_data_dir}/traj_data_{data_type}.pkl'):
+    if regenerate_data or not os.path.exists(f'{traj_data_dir}/traj_data_{data_type}.pkl'):
         trajectories = []
         for traj_it in range(6):
             print(traj_it)

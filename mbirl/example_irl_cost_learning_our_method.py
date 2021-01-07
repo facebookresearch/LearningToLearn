@@ -16,8 +16,6 @@ sys.path.append(_ROOT_DIR)
 traj_data_dir = os.path.join(_ROOT_DIR, 'traj_data')
 model_data_dir = os.path.join(_ROOT_DIR, 'model_data')
 
-os.environ['KMP_DUPLICATE_LIB_OK']='True'
-
 from mbirl.learnable_costs import LearnableWeightedCost, LearnableTimeDepWeightedCost
 from mbirl.keypoint_mpc import KeypointMPCWrapper
 
@@ -150,8 +148,8 @@ if __name__ == '__main__':
     print(expert_demo.shape)
 
     # type of cost
-    cost_type = 'Weighted'
     # cost_type = 'Weighted'
+    cost_type = 'TimeDep'
 
     learnable_cost = None
 
@@ -167,7 +165,7 @@ if __name__ == '__main__':
     n_outer_iter = 20
     n_inner_iter = 1
     time_horizon = 25
-    n_test_traj = 1
+    n_test_traj = 5
     irl_cost_tr, irl_cost_eval, learnable_cost_params = irl_training(learnable_cost, robot_model, irl_loss_fn,
                                                                      expert_demo, trajs[1:1+n_test_traj], n_outer_iter, n_inner_iter)
 

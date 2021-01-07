@@ -75,12 +75,17 @@ higher
 cvxpy
 urdf_parser_py
 ```
+#### Generate Data
+1. Choose type of data 'reaching' or 'placing' by changing the variable 'data_type' in the script 'mbirl/generate_expert_demo_interpolate.py'
+2. ```python mbirl/generate_expert_demo_interpolate.py```
 
 #### Run Our Method
-```python mbirl/simulation/example_irl_cost_learning_our_method.py```
+1. Choose type of data 'reaching' or 'placing' by changing the variable 'data_type' in the script 'mbirl/example_irl_cost_learning_our_method.py'
+2. ```python mbirl/example_irl_cost_learning_our_method.py```
 
 #### Run the Baseline
-```python mbirl/simulation/example_feature_matching_baseline.py```
+1. Choose type of data 'reaching' or 'placing' by changing the variable 'data_type' in the script 'mbirl/example_feature_matching_baseline.py'
+2. ```python mbirl/example_feature_matching_baseline.py```
 
 #### Citation
 ```

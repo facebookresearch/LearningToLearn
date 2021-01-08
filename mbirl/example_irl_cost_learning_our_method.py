@@ -13,13 +13,12 @@ from differentiable_robot_model import DifferentiableRobotModel
 _ROOT_DIR = dirname(abspath(__file__))
 sys.path.append(_ROOT_DIR)
 
-traj_data_dir = os.path.join(_ROOT_DIR, 'traj_data')
-model_data_dir = os.path.join(_ROOT_DIR, 'model_data')
-
-os.environ['KMP_DUPLICATE_LIB_OK']='True'
-
 from mbirl.learnable_costs import LearnableWeightedCost, LearnableTimeDepWeightedCost
 from mbirl.keypoint_mpc import KeypointMPCWrapper
+
+
+traj_data_dir = os.path.join(_ROOT_DIR, 'traj_data')
+model_data_dir = os.path.join(_ROOT_DIR, 'model_data')
 
 
 # The IRL Loss, the learning objective for the learnable cost functions.
@@ -79,9 +78,12 @@ def irl_training(learnable_cost, robot_model, irl_loss_fn, expert_demo, test_tra
     # get initial irl loss
     irl_cost_tr.append(irl_loss_fn(pred_traj, expert_demo).mean())
 
+    print("Cost function parameters to be optimized:")
     for name, param in learnable_cost.named_parameters():
         print(name)
         print(param.data)
+
+    # start of inverse RL loop
     for outer_i in range(n_outer_iter):
 
         learnable_cost_opt.zero_grad()
@@ -169,7 +171,8 @@ if __name__ == '__main__':
     time_horizon = 25
     n_test_traj = 1
     irl_cost_tr, irl_cost_eval, learnable_cost_params = irl_training(learnable_cost, robot_model, irl_loss_fn,
-                                                                     expert_demo, trajs[1:1+n_test_traj], n_outer_iter, n_inner_iter)
+                                                                     expert_demo, trajs[1:1+n_test_traj],
+                                                                     n_outer_iter, n_inner_iter)
 
     if not os.path.exists(model_data_dir):
         os.makedirs(model_data_dir)

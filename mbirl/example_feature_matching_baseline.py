@@ -2,6 +2,7 @@ import os, sys
 import random
 import numpy as np
 import torch
+import cvxpy as cp
 import dill as pickle
 from differentiable_robot_model import DifferentiableRobotModel
 from os.path import dirname, abspath
@@ -9,16 +10,12 @@ from os.path import dirname, abspath
 _ROOT_DIR = dirname(abspath(__file__))
 sys.path.append(_ROOT_DIR)
 
+from mbirl.keypoint_mpc import KeypointMPCWrapper
+import mbirl
+
 traj_data_dir = os.path.join(_ROOT_DIR, 'traj_data')
 model_data_dir = os.path.join(_ROOT_DIR, 'model_data')
 
-from mbirl.learnable_costs import LearnableWeightedCost, LearnableTimeDepWeightedCost
-from mbirl.keypoint_mpc import KeypointMPCWrapper
-import logging; logging.disable(logging.CRITICAL);
-
-import mbirl
-
-import cvxpy as cp
 
 class QPoptimizer(object):
     # Code adapted from:  https://github.com/reinforcement-learning-kr/lets-do-irl

@@ -2,10 +2,8 @@ import os, sys
 import random
 import torch
 import numpy as np
-import hydra
 import dill as pickle
 import pybullet_utils.bullet_client as bc
-import pybullet_data
 import pybullet
 import time
 import mbirl
@@ -180,6 +178,7 @@ if __name__ == '__main__':
             traj_data = {}
             policy = ActionNetwork(dmodel)
             goal_ee1 = cur_ee[-3:].clone()
+            # TODO: potential bug, this generates a 3x3 tensor ??
             goal_ee1[:, 0] = goal_ee1[:, 0] + torch.Tensor(np.random.uniform(-0.4, -0.3, 1))
             goal_ee2 = goal_ee1.clone()
             goal_ee2[:, 2] = goal_ee2[:, 2] + torch.Tensor(np.random.uniform(-0.5, -0.4, 1))
@@ -215,9 +214,9 @@ if __name__ == '__main__':
 
     n_trajs = len(trajs)
 
-    fig = plt.figure(figsize=(2 * 5, np.ceil(n_trajs/2) * 5))
+    fig = plt.figure(figsize=(2 * 5, int(np.ceil(n_trajs/2)) * 5))
     for i, traj in enumerate(trajs):
-        ax = fig.add_subplot(2, np.ceil(n_trajs/2), i + 1, projection='3d')
+        ax = fig.add_subplot(2, int(np.ceil(n_trajs/2)), i + 1, projection='3d')
         ax.plot(trajs[i]['keypoints'][1:, 0, 0], trajs[i]['keypoints'][1:, 0, 1], trajs[i]['keypoints'][1:, 0, 2])
         ax.scatter(trajs[i]['keypoints'][1:, 0, 0], trajs[i]['keypoints'][1:, 0, 1], trajs[i]['keypoints'][1:, 0, 2],
                    color='blue')
@@ -261,9 +260,6 @@ if __name__ == '__main__':
 
     sim.setRealTimeSimulation(0)
 
-    # for testing purposes we set joint damping to zero, because in pybullet the forward dynamics (used for simulation)
-    # does use joint damping, but the inverse dynamics call does not use joint damping - which makes it hard to test both
-    # with the same robot model if joint damping is not zero
     for link_idx in range(8):
         sim.changeDynamics(robot_id, link_idx, linearDamping=0.0, angularDamping=0.0, jointDamping=0.0)
         sim.changeDynamics(robot_id, link_idx, maxJointVelocity=200)

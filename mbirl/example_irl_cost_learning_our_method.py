@@ -36,11 +36,10 @@ def evaluate_action_optimization(learned_cost, robot_model, irl_loss_fn, trajs, 
     eval_costs = []
     for i, traj in enumerate(trajs):
 
-        traj_len = len(traj['q'])
-        expert_demo = np.concatenate([traj['q'].reshape(traj_len, -1), traj['keypoints'].reshape(traj_len, -1)],
-                                     axis=-1)
+        traj_len = len(traj['desired_keypoints'])
+        start_pose = traj['start_joint_config'].squeeze()
+        expert_demo = traj['desired_keypoints'].reshape(traj_len, -1)
         expert_demo = torch.Tensor(expert_demo)
-        start_pose = torch.Tensor(expert_demo[0, :7])
 
         keypoint_mpc_wrapper = KeypointMPCWrapper(robot_model)
         action_optimizer = torch.optim.SGD(keypoint_mpc_wrapper.parameters(), lr=1.0)
@@ -62,15 +61,13 @@ def evaluate_action_optimization(learned_cost, robot_model, irl_loss_fn, trajs, 
 
 
 # Helper function for the irl learning loop
-def irl_training(learnable_cost, robot_model, irl_loss_fn, expert_demo, test_trajs, n_outer_iter, n_inner_iter):
+def irl_training(learnable_cost, robot_model, irl_loss_fn, expert_demo, start_pose, test_trajs, n_outer_iter, n_inner_iter):
     learnable_cost_opt = torch.optim.Adam(learnable_cost.parameters(), lr=1e-2)
     keypoint_mpc_wrapper = KeypointMPCWrapper(robot_model)
     action_optimizer = torch.optim.SGD(keypoint_mpc_wrapper.parameters(), lr=1.0)
 
     irl_cost_tr = []
     irl_cost_eval = []
-
-    start_pose = torch.Tensor(expert_demo[0, :7])
 
     # unroll and extract expected features
     pred_traj = keypoint_mpc_wrapper.roll_out(start_pose.clone())
@@ -136,8 +133,8 @@ if __name__ == '__main__':
     urdf_path = os.path.join(mbirl.__path__[0], rel_urdf_path)
     robot_model = DifferentiableRobotModel(urdf_path=urdf_path, name="kuka_w_obj_keypts")
 
-    # data_type = 'reaching'
     data_type = 'reaching'
+    # data_type = 'placing'
     with open(f'{traj_data_dir}/traj_data_{data_type}.pkl', 'rb') as f:
         trajs = pickle.load(f)
     if data_type == 'reaching':
@@ -145,9 +142,10 @@ if __name__ == '__main__':
     else:
         traj = trajs[0]
 
-    traj_len = len(traj['q'])
+    traj_len = len(traj['desired_keypoints'])
 
-    expert_demo = np.concatenate([traj['q'].reshape(traj_len, -1), traj['keypoints'].reshape(traj_len, -1)], axis=-1)
+    start_q = traj['start_joint_config'].squeeze()
+    expert_demo = traj['desired_keypoints'].reshape(traj_len, -1)
     expert_demo = torch.Tensor(expert_demo)
     print(expert_demo.shape)
 
@@ -171,7 +169,7 @@ if __name__ == '__main__':
     time_horizon = 25
     n_test_traj = 5
     irl_cost_tr, irl_cost_eval, learnable_cost_params = irl_training(learnable_cost, robot_model, irl_loss_fn,
-                                                                     expert_demo, trajs[1:1+n_test_traj],
+                                                                     expert_demo, start_q, trajs[1:1+n_test_traj],
                                                                      n_outer_iter, n_inner_iter)
 
     if not os.path.exists(model_data_dir):

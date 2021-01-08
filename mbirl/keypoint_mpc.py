@@ -13,7 +13,7 @@ class KeypointMPCWrapper(torch.nn.Module):
 
     def __init__(self, model):
         super().__init__()
-        self.action_seq = torch.nn.Parameter(torch.Tensor(np.zeros([25, 7])))
+        self.action_seq = torch.nn.Parameter(torch.Tensor(np.zeros([24, 7])))
         self.robot_model = model
 
     def forward(self, x, u=0):
@@ -33,7 +33,7 @@ class KeypointMPCWrapper(torch.nn.Module):
         joint_state, keypts = self.forward(joint_state)
         qs.append(joint_state)
         key_pos.append(keypts)
-        for t in range(25):
+        for t in range(24):
             ac = self.action_seq[t]
             joint_state, keypts = self.forward(joint_state.detach(), ac)
             tl = torch.Tensor(joint_limits)
@@ -44,4 +44,4 @@ class KeypointMPCWrapper(torch.nn.Module):
         return torch.cat((torch.stack(qs), torch.stack(key_pos)),dim=1)
 
     def reset_actions(self):
-        self.action_seq.data = torch.Tensor(np.zeros([25, 7]))
+        self.action_seq.data = torch.Tensor(np.zeros([24, 7]))

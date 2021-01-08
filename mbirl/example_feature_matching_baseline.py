@@ -71,11 +71,11 @@ def evaluate_action_optimization(weights, robot_model, irl_loss_fn, trajs, n_inn
     eval_costs = []
     for i, traj in enumerate(trajs):
 
-        traj_len = len(traj['q'])
-        expert_demo = np.concatenate([traj['q'].reshape(traj_len, -1), traj['keypoints'].reshape(traj_len, -1)],
-                                     axis=-1)
+        traj_len = len(traj['desired_keypoints'])
+
+        start_pose = traj['start_joint_config'].squeeze()
+        expert_demo = traj['desired_keypoints'].reshape(traj_len, -1)
         expert_demo = torch.Tensor(expert_demo)
-        start_pose = torch.Tensor(expert_demo[0, :7])
 
         keypoint_mpc_wrapper = KeypointMPCWrapper(robot_model)
         action_optimizer = torch.optim.SGD(keypoint_mpc_wrapper.parameters(), lr=1.0)
@@ -96,19 +96,18 @@ def evaluate_action_optimization(weights, robot_model, irl_loss_fn, trajs, n_inn
     return torch.stack(eval_costs).detach()
 
 
-def irl_training(robot_model, irl_loss_fn, expert_demo, test_trajs, n_outer_iter, n_inner_iter):
+def irl_training(robot_model, irl_loss_fn, expert_demo, start_joint_state, test_trajs, n_outer_iter, n_inner_iter):
 
     irl_cost_tr = []
     irl_cost_eval = []
 
     cost_optimizer = QPoptimizer()
     keypoint_mpc_wrapper = KeypointMPCWrapper(robot_model)
-    action_optimizer = torch.optim.SGD(keypoint_mpc_wrapper.parameters(), lr=0.0001)
+    action_optimizer = torch.optim.SGD(keypoint_mpc_wrapper.parameters(), lr=1.0)
 
-    start_joint_state = expert_demo[0, :7].clone()
     goal_keypts = expert_demo[-1, -9:].clone()
 
-    expert_features = extract_feature_expectations(expert_demo[:, -9:], goal_keypts)
+    expert_features = extract_feature_expectations(expert_demo, goal_keypts)
 
     # unroll and extract expected features
     pred_traj = keypoint_mpc_wrapper.roll_out(start_joint_state.clone())
@@ -180,18 +179,16 @@ if __name__ == '__main__':
         'time_horizon': 25
     }
 
-    # data_type = 'reaching'
     data_type = 'reaching'
+    # data_type = 'placing'
     with open(f'{traj_data_dir}/traj_data_{data_type}.pkl', 'rb') as f:
         trajs = pickle.load(f)
-    if data_type == 'reaching':
-        traj = trajs[0]
-    else:
-        traj = trajs[0]
 
-    traj_len = len(traj['q'])
+    traj = trajs[0]
+    traj_len = len(traj['desired_keypoints'])
 
-    expert_demo = np.concatenate([traj['q'].reshape(traj_len, -1), traj['keypoints'].reshape(traj_len, -1)], axis=-1)
+    start_q = traj['start_joint_config'].squeeze()
+    expert_demo = traj['desired_keypoints'].reshape(traj_len, -1)
     expert_demo = torch.Tensor(expert_demo)
     print(expert_demo.shape)
 
@@ -206,7 +203,8 @@ if __name__ == '__main__':
     time_horizon = 25
     n_test_traj = 5
     irl_cost_tr, irl_cost_eval, learnable_cost_params = irl_training(robot_model, irl_loss_fn,
-                                                                     expert_demo, trajs[1:1+n_test_traj], n_outer_iter, n_inner_iter)
+                                                                     expert_demo, start_q, trajs[1:1+n_test_traj],
+                                                                     n_outer_iter, n_inner_iter)
 
     if not os.path.exists(model_data_dir):
         os.makedirs(model_data_dir)

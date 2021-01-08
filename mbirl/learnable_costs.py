@@ -5,8 +5,8 @@ import torch
 class LearnableWeightedCost(torch.nn.Module):
     def __init__(self, dim=9):
         super(LearnableWeightedCost, self).__init__()
-        self.weights = torch.nn.Parameter(0.01 * torch.ones([dim,1]))
-        self.clip = torch.nn.Softplus()
+        self.weights = torch.nn.Parameter(0.01 * torch.ones([dim, 1]))
+        self.clip = torch.nn.ReLU()
         self.meta_grads = [[] for _, _ in enumerate(self.parameters())]
 
     def forward(self, y_in, y_target):
@@ -14,7 +14,7 @@ class LearnableWeightedCost(torch.nn.Module):
         mse = ((y_in[:,-9:] - y_target[-9:]) ** 2).squeeze()
 
         # weighted mse
-        wmse = torch.mm(mse,self.weights)
+        wmse = torch.mm(mse, self.clip(self.weights))
         return wmse.mean()
 
 
@@ -22,13 +22,14 @@ class LearnableWeightedCost(torch.nn.Module):
 class LearnableTimeDepWeightedCost(torch.nn.Module):
     def __init__(self, dim=9):
         super(LearnableTimeDepWeightedCost, self).__init__()
-        self.weights = torch.nn.Parameter(0.01 * torch.ones([25,dim]))
-        self.clip = torch.nn.Softplus()
+        self.weights = torch.nn.Parameter(0.01 * torch.ones([10, dim]))
+        self.clip = torch.nn.ReLU()
         self.meta_grads = [[] for _, _ in enumerate(self.parameters())]
 
     def forward(self, y_in, y_target):
         assert y_in.dim() == 2
-        mse = ((y_in[1:,-9:] - y_target[-9:]) ** 2).squeeze()
+        mse = ((y_in[:,-9:] - y_target[-9:]) ** 2).squeeze()
         # weighted mse
-        wmse = torch.matmul(mse,self.weights.T)
+        #wmse = torch.matmul(mse,self.weights.T)
+        wmse = mse * self.clip(self.weights)
         return wmse.mean()

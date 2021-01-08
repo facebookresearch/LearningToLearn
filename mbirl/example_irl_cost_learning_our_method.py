@@ -50,7 +50,7 @@ def evaluate_action_optimization(learned_cost, robot_model, irl_loss_fn, trajs, 
             pred_traj = keypoint_mpc_wrapper.roll_out(start_pose.clone())
             # use the learned loss to update the action sequence
             learned_cost_val = learned_cost(pred_traj, expert_demo[-1])
-            learned_cost_val.backward()
+            learned_cost_val.backward(retain_graph=True)
             action_optimizer.step()
 
         # Actually take the next step after optimizing the action
@@ -133,15 +133,12 @@ if __name__ == '__main__':
     urdf_path = os.path.join(mbirl.__path__[0], rel_urdf_path)
     robot_model = DifferentiableRobotModel(urdf_path=urdf_path, name="kuka_w_obj_keypts")
 
-    data_type = 'reaching'
-    # data_type = 'placing'
+    # data_type = 'reaching'
+    data_type = 'placing'
     with open(f'{traj_data_dir}/traj_data_{data_type}.pkl', 'rb') as f:
         trajs = pickle.load(f)
-    if data_type == 'reaching':
-        traj = trajs[0]
-    else:
-        traj = trajs[0]
 
+    traj = trajs[0]
     traj_len = len(traj['desired_keypoints'])
 
     start_q = traj['start_joint_config'].squeeze()
@@ -164,9 +161,9 @@ if __name__ == '__main__':
 
     irl_loss_fn = IRLLoss()
 
-    n_outer_iter = 20
+    n_outer_iter = 100
     n_inner_iter = 1
-    time_horizon = 25
+    time_horizon = 10
     n_test_traj = 5
     irl_cost_tr, irl_cost_eval, learnable_cost_params = irl_training(learnable_cost, robot_model, irl_loss_fn,
                                                                      expert_demo, start_q, trajs[1:1+n_test_traj],

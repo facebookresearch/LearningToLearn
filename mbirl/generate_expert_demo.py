@@ -160,8 +160,8 @@ if __name__ == '__main__':
     start_keypts = dmodel.forward_kin(rest_pose)
     print(f"cur keypts: {start_keypts}")
 
-    # data_type = 'placing'
-    data_type = 'reaching'
+    data_type = 'placing'
+    # data_type = 'reaching'
 
     regenerate_data = False
 
@@ -178,16 +178,13 @@ if __name__ == '__main__':
             goal_keypts2 = goal_keypts1.clone()
             goal_keypts2[:, 2] = goal_keypts2[:, 2] + torch.Tensor(np.random.uniform(-0.5, -0.4, 1))
 
-            if data_type == 'reaching':
-                goal_ee_list = torch.stack([start_keypts.clone() for i in range(25)])
-            else:
-                goal_ee_list = torch.stack([start_keypts.clone() for i in range(12)] + [goal_keypts1.clone() for i in range(13)])
+            goal_ee_list = torch.stack([start_keypts.clone() for i in range(10)])
             for i in range(3):
                 if data_type == 'reaching':
-                    goal_ee_list[:, i, 0] = torch.linspace(start_keypts[i, 0], goal_keypts1[i, 0], 25)
+                    goal_ee_list[:, i, 0] = torch.linspace(start_keypts[i, 0], goal_keypts1[i, 0], 10)
                 else:
-                    goal_ee_list[:12, i, 0] = torch.linspace(start_keypts[i, 0], goal_keypts1[i, 0], 12)
-                    goal_ee_list[12:, i, 2] = torch.linspace(goal_keypts1[i, 2], goal_keypts2[i, 2], 13)
+                    goal_ee_list[:5, i, 0] = torch.linspace(start_keypts[i, 0], goal_keypts1[i, 0], 5)
+                    goal_ee_list[5:, i, 2] = torch.linspace(goal_keypts1[i, 2], goal_keypts2[i, 2], 5)
 
             traj_data['start_joint_config'] = rest_pose
             traj_data['desired_keypoints'] = goal_ee_list

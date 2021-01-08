@@ -46,7 +46,7 @@ class GroundTruthForwardModel(torch.nn.Module):
 class ActionNetwork(torch.nn.Module):
     def __init__(self, model):
         super().__init__()
-        self.action = torch.nn.Parameter(torch.Tensor(np.zeros([25, 7])))
+        self.action = torch.nn.Parameter(torch.Tensor(np.zeros([10, 7])))
         # torch.nn.Module.register_paramete(self.action)
         self.model = model
         self.optimizer = torch.optim.SGD(self.parameters(), lr=1e-1)
@@ -61,7 +61,7 @@ class ActionNetwork(torch.nn.Module):
         key_pos = []
         qs.append(joint_state)
         key_pos.append(self.model.forward_kin(joint_state))
-        for t in range(25):
+        for t in range(10):
             ac = self.action[t]
             ee_pred = self.forward(joint_state.detach(), ac)
             joint_state = (joint_state.detach() + ac).clone()
@@ -178,7 +178,10 @@ if __name__ == '__main__':
             goal_keypts2 = goal_keypts1.clone()
             goal_keypts2[:, 2] = goal_keypts2[:, 2] + torch.Tensor(np.random.uniform(-0.5, -0.4, 1))
 
-            goal_ee_list = torch.stack([start_keypts.clone() for i in range(10)])
+            if data_type == 'reaching':
+                goal_ee_list = torch.stack([start_keypts.clone() for i in range(10)])
+            else:
+                goal_ee_list = torch.stack([start_keypts.clone() for i in range(5)] + [goal_keypts1.clone() for i in range(5)])
             for i in range(3):
                 if data_type == 'reaching':
                     goal_ee_list[:, i, 0] = torch.linspace(start_keypts[i, 0], goal_keypts1[i, 0], 10)

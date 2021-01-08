@@ -13,7 +13,7 @@ from differentiable_robot_model import DifferentiableRobotModel
 _ROOT_DIR = dirname(abspath(__file__))
 sys.path.append(_ROOT_DIR)
 
-from mbirl.learnable_costs import LearnableWeightedCost, LearnableTimeDepWeightedCost
+from mbirl.learnable_costs import LearnableWeightedCost, LearnableTimeDepWeightedCost, LearnableRBFWeightedCost
 from mbirl.keypoint_mpc import KeypointMPCWrapper
 
 
@@ -72,13 +72,25 @@ def irl_training(learnable_cost, robot_model, irl_loss_fn, expert_demo, start_po
     # unroll and extract expected features
     pred_traj = keypoint_mpc_wrapper.roll_out(start_pose.clone())
 
-    # get initial irl loss
-    irl_cost_tr.append(irl_loss_fn(pred_traj, expert_demo).mean())
-
     print("Cost function parameters to be optimized:")
+    learnable_cost_params = None
     for name, param in learnable_cost.named_parameters():
         print(name)
-        print(param.data)
+        print(param)
+        if name == 'weights':
+            learnable_cost_params = param.data
+
+    if learnable_cost_params is None:
+        for name, param in learnable_cost.weights_fn.named_parameters():
+            print(name)
+            print(param)
+            if name == 'weights':
+                learnable_cost_params = param.data
+
+    # get initial irl loss
+    irl_loss = irl_loss_fn(pred_traj, expert_demo).mean()
+    irl_cost_tr.append(irl_loss)
+    print("irl cost training iter: {} loss: {}".format(0, irl_loss.item()))
 
     # start of inverse RL loop
     for outer_i in range(n_outer_iter):
@@ -101,7 +113,7 @@ def irl_training(learnable_cost, robot_model, irl_loss_fn, expert_demo, start_po
             # compute task loss
             irl_loss = irl_loss_fn(pred_traj, expert_demo).mean()
 
-            print("irl cost training iter: {} loss: {}".format(outer_i, irl_loss.item()))
+            print("irl cost training iter: {} loss: {}".format(outer_i+1, irl_loss.item()))
 
             # backprop gradient of learned cost parameters wrt irl loss
             irl_loss.backward(retain_graph=True)
@@ -113,11 +125,20 @@ def irl_training(learnable_cost, robot_model, irl_loss_fn, expert_demo, start_po
                                                   n_inner_iter)
         irl_cost_eval.append(eval_costs)
 
+    learnable_cost_params = None
     for name, param in learnable_cost.named_parameters():
         print(name)
         print(param)
         if name == 'weights':
             learnable_cost_params = param.data
+
+    if learnable_cost_params is None:
+        for name, param in learnable_cost.weights_fn.named_parameters():
+            print(name)
+            print(param)
+            if name == 'weights':
+                learnable_cost_params = param.data
+
 
     return torch.stack(irl_cost_tr), torch.stack(irl_cost_eval), learnable_cost_params
 
@@ -148,7 +169,8 @@ if __name__ == '__main__':
 
     # type of cost
     # cost_type = 'Weighted'
-    cost_type = 'TimeDep'
+    # cost_type = 'TimeDep'
+    cost_type = 'RBF'
 
     learnable_cost = None
 
@@ -156,6 +178,8 @@ if __name__ == '__main__':
         learnable_cost = LearnableWeightedCost()
     elif cost_type == 'TimeDep':
         learnable_cost = LearnableTimeDepWeightedCost()
+    elif cost_type == 'RBF':
+        learnable_cost = LearnableRBFWeightedCost()
     else:
         print('Cost not implemented')
 
@@ -164,9 +188,11 @@ if __name__ == '__main__':
     n_outer_iter = 100
     n_inner_iter = 1
     time_horizon = 10
-    n_test_traj = 5
+    n_test_traj = 2
+    train_trajs = trajs[0:1]
+    test_trajs = trajs[1:1+n_test_traj]
     irl_cost_tr, irl_cost_eval, learnable_cost_params = irl_training(learnable_cost, robot_model, irl_loss_fn,
-                                                                     expert_demo, start_q, trajs[1:1+n_test_traj],
+                                                                     expert_demo, start_q, test_trajs,
                                                                      n_outer_iter, n_inner_iter)
 
     if not os.path.exists(model_data_dir):

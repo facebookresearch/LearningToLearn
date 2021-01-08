@@ -115,7 +115,7 @@ def irl_training(robot_model, irl_loss_fn, expert_demo, start_joint_state, test_
 
     # get initial irl loss
     irl_cost_tr.append(irl_loss_fn(pred_traj, expert_demo).mean())
-    print("irl loss start, loss: {}".format(irl_cost_tr[-1]))
+    print("irl loss outer iter: {} loss: {}".format(0, irl_cost_tr[-1]))
 
     # get initial weights
     W, _ = cost_optimizer(len(expert_features), expert_features, phi)
@@ -146,7 +146,7 @@ def irl_training(robot_model, irl_loss_fn, expert_demo, start_joint_state, test_
 
         # compute irl loss, solely for comparing to our method
         irl_cost_tr.append(irl_loss_fn(pred_traj, expert_demo).mean())
-        print("irl loss outer iter: {} loss: {}".format(outer_iter, irl_cost_tr[-1]))
+        print("irl loss outer iter: {} loss: {}".format(outer_iter+1, irl_cost_tr[-1]))
 
         # check convergence
         hyper_distance = np.abs(np.dot(W, expert_features.detach()-phi.detach())) #hyperdistance = t
@@ -179,8 +179,8 @@ if __name__ == '__main__':
         'time_horizon': 25
     }
 
-    data_type = 'reaching'
-    # data_type = 'placing'
+    # data_type = 'reaching'
+    data_type = 'placing'
     with open(f'{traj_data_dir}/traj_data_{data_type}.pkl', 'rb') as f:
         trajs = pickle.load(f)
 
@@ -198,9 +198,9 @@ if __name__ == '__main__':
     # compare progress to our algorithm
     irl_loss_fn = IRLLoss()
 
-    n_outer_iter = 20 #200
+    n_outer_iter = 100 #200
     n_inner_iter = 1
-    time_horizon = 25
+    time_horizon = 10
     n_test_traj = 5
     irl_cost_tr, irl_cost_eval, learnable_cost_params = irl_training(robot_model, irl_loss_fn,
                                                                      expert_demo, start_q, trajs[1:1+n_test_traj],

@@ -46,7 +46,7 @@ class GroundTruthForwardModel(torch.nn.Module):
 class ActionNetwork(torch.nn.Module):
     def __init__(self, model):
         super().__init__()
-        self.action = torch.nn.Parameter(torch.Tensor(np.zeros([25, 7])))
+        self.action = torch.nn.Parameter(torch.Tensor(np.zeros([10, 7])))
         # torch.nn.Module.register_paramete(self.action)
         self.model = model
         self.optimizer = torch.optim.SGD(self.parameters(), lr=1e-1)
@@ -61,7 +61,7 @@ class ActionNetwork(torch.nn.Module):
         key_pos = []
         qs.append(joint_state)
         key_pos.append(self.model.forward_kin(joint_state))
-        for t in range(25):
+        for t in range(10):
             ac = self.action[t]
             ee_pred = self.forward(joint_state.detach(), ac)
             joint_state = (joint_state.detach() + ac).clone()
@@ -80,7 +80,7 @@ def generate_demo_traj(rest_pose, goal_ee, policy):
         policy.optimizer.zero_grad()
         loss.backward(retain_graph=True)
         policy.optimizer.step()
-    print('keypoint', key_pos[12, -3:])
+    print('keypoint', key_pos[5, -3:])
     print('goal1', goal_ee1)
     print('keypoint', key_pos[-1, -3:])
     print('goal2', goal_ee2)
@@ -166,7 +166,7 @@ if __name__ == '__main__':
     # data_type = 'reaching'
     data_type = 'placing'
 
-    regenerate_data = False
+    regenerate_data = True
 
     if not os.path.exists(traj_data_dir):
         os.makedirs(traj_data_dir)
@@ -179,20 +179,20 @@ if __name__ == '__main__':
             policy = ActionNetwork(dmodel)
             goal_ee1 = cur_ee[-3:].clone()
             # TODO: potential bug, this generates a 3x3 tensor ??
-            goal_ee1[:, 0] = goal_ee1[:, 0] + torch.Tensor(np.random.uniform(-0.4, -0.3, 1))
+            goal_ee1[:, 0] = goal_ee1[:, 0] + torch.Tensor(np.random.uniform(-0.3, -0.2, 1))
             goal_ee2 = goal_ee1.clone()
-            goal_ee2[:, 2] = goal_ee2[:, 2] + torch.Tensor(np.random.uniform(-0.5, -0.4, 1))
+            goal_ee2[:, 2] = goal_ee2[:, 2] + torch.Tensor(np.random.uniform(-0.2, -0.1, 1))
 
             if data_type == 'reaching':
-                goal_ee_list = torch.stack([cur_ee.clone() for i in range(25)])
+                goal_ee_list = torch.stack([cur_ee.clone() for i in range(10)])
             else:
-                goal_ee_list = torch.stack([cur_ee.clone() for i in range(12)] + [goal_ee1.clone() for i in range(13)])
+                goal_ee_list = torch.stack([cur_ee.clone() for i in range(5)] + [goal_ee1.clone() for i in range(5)])
             for i in range(3):
                 if data_type == 'reaching':
-                    goal_ee_list[:, i, 0] = torch.linspace(cur_ee[i, 0], goal_ee1[i, 0], 25)
+                    goal_ee_list[:, i, 0] = torch.linspace(cur_ee[i, 0], goal_ee1[i, 0], 10)
                 else:
-                    goal_ee_list[:12, i, 0] = torch.linspace(cur_ee[i, 0], goal_ee1[i, 0], 12)
-                    goal_ee_list[12:, i, 2] = torch.linspace(goal_ee1[i, 2], goal_ee2[i, 2], 13)
+                    goal_ee_list[:5, i, 0] = torch.linspace(cur_ee[i, 0], goal_ee1[i, 0], 5)
+                    goal_ee_list[5:, i, 2] = torch.linspace(goal_ee1[i, 2], goal_ee2[i, 2], 5)
 
             # print(goal_ee_list)
             # show_goal_trajectory(goal_ee_list, data_type, save=True)
@@ -201,7 +201,8 @@ if __name__ == '__main__':
             traj_data['q'] = qs
             traj_data['keypoints'] = keypoints
             traj_data['actions'] = actions
-            traj_data['desired'] = goal_ee_list
+            traj_data['start_joint_config'] = rest_pose
+            traj_data['desired_keypoints'] = goal_ee_list
             trajectories.append(traj_data)
 
         with open(f'{traj_data_dir}/traj_data_{data_type}.pkl', "wb") as fp:
@@ -220,19 +221,19 @@ if __name__ == '__main__':
         ax.plot(trajs[i]['keypoints'][1:, 0, 0], trajs[i]['keypoints'][1:, 0, 1], trajs[i]['keypoints'][1:, 0, 2])
         ax.scatter(trajs[i]['keypoints'][1:, 0, 0], trajs[i]['keypoints'][1:, 0, 1], trajs[i]['keypoints'][1:, 0, 2],
                    color='blue')
-        ax.plot(trajs[i]['desired'][:, 0, 0], trajs[i]['desired'][:, 0, 1], trajs[i]['desired'][:, 0, 2], color='orange')
-        ax.scatter(trajs[i]['desired'][:, 0, 0], trajs[i]['desired'][:, 0, 1], trajs[i]['desired'][:, 0, 2],
+        ax.plot(trajs[i]['desired_keypoints'][:, 0, 0], trajs[i]['desired_keypoints'][:, 0, 1], trajs[i]['desired_keypoints'][:, 0, 2], color='orange')
+        ax.scatter(trajs[i]['desired_keypoints'][:, 0, 0], trajs[i]['desired_keypoints'][:, 0, 1], trajs[i]['desired_keypoints'][:, 0, 2],
                    color='orange')
         ax.scatter(trajs[i]['keypoints'][1, 0, 0], trajs[i]['keypoints'][1, 0, 1], trajs[i]['keypoints'][1, 0, 2],
                    color='red')
         ax.scatter(trajs[i]['keypoints'][-1, 0, 0], trajs[i]['keypoints'][-1, 0, 1], trajs[i]['keypoints'][-1, 0, 2],
                    color='green')
-        max_x = max(trajs[i]['keypoints'][1:, 0, 0].max(), trajs[i]['desired'][:, 0, 0].max())
-        min_x = min(trajs[i]['keypoints'][1:, 0, 0].min(), trajs[i]['desired'][:, 0, 0].min())
-        max_y = max(trajs[i]['keypoints'][1:, 0, 1].max(), trajs[i]['desired'][:, 0, 1].max())
-        min_y = min(trajs[i]['keypoints'][1:, 0, 1].min(), trajs[i]['desired'][:, 0, 1].min())
-        max_z = max(trajs[i]['keypoints'][1:, 0, 2].max(), trajs[i]['desired'][:, 0, 2].max())
-        min_z = min(trajs[i]['keypoints'][1:, 0, 2].min(), trajs[i]['desired'][:, 0, 2].min())
+        max_x = max(trajs[i]['keypoints'][1:, 0, 0].max(), trajs[i]['desired_keypoints'][:, 0, 0].max())
+        min_x = min(trajs[i]['keypoints'][1:, 0, 0].min(), trajs[i]['desired_keypoints'][:, 0, 0].min())
+        max_y = max(trajs[i]['keypoints'][1:, 0, 1].max(), trajs[i]['desired_keypoints'][:, 0, 1].max())
+        min_y = min(trajs[i]['keypoints'][1:, 0, 1].min(), trajs[i]['desired_keypoints'][:, 0, 1].min())
+        max_z = max(trajs[i]['keypoints'][1:, 0, 2].max(), trajs[i]['desired_keypoints'][:, 0, 2].max())
+        min_z = min(trajs[i]['keypoints'][1:, 0, 2].min(), trajs[i]['desired_keypoints'][:, 0, 2].min())
         range_x = max_x - min_x
         range_y = max_y - min_y
         range_z = max_z - min_z

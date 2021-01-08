@@ -130,7 +130,7 @@ if __name__ == '__main__':
 
     data_type = 'placing'  # 'placing'
 
-    generate_new_data = False
+    regenerate_data = False
 
     if not os.path.exists(traj_data_dir):
         os.makedirs(traj_data_dir)
@@ -155,14 +155,14 @@ if __name__ == '__main__':
                 goal_ee1 = goal_ee2.clone()
             else:
                 goal_ee2 = goal_ee1.clone()
-        if generate_new_data or not os.path.exists(f'{traj_data_dir}/traj_data_{data_type}.pkl'):
+        if regenerate_data or not os.path.exists(f'{traj_data_dir}/traj_data_{data_type}.pkl'):
             qs, keypoints, actions = generate_demo_traj(rest_pose, goal_ee1, goal_ee2, policy)
             traj_data['q'] = qs
             traj_data['keypoints'] = keypoints
             traj_data['actions'] = actions
             trajectories.append(traj_data)
 
-    if generate_new_data or not os.path.exists(f'{traj_data_dir}/traj_data_{data_type}.pkl'):
+    if regenerate_data or not os.path.exists(f'{traj_data_dir}/traj_data_{data_type}.pkl'):
         with open(f'{traj_data_dir}/traj_data_{data_type}.pkl', "wb") as fp:
             pickle.dump(trajectories, fp, protocol=pickle.HIGHEST_PROTOCOL)
 

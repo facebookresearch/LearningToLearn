@@ -189,9 +189,6 @@ if __name__ == '__main__':
     else:
         traj = trajs[0]
 
-    #traj = np.load('mbirl/expert_demo.npy')
-    #print(traj)
-
     traj_len = len(traj['q'])
 
     expert_demo = np.concatenate([traj['q'].reshape(traj_len, -1), traj['keypoints'].reshape(traj_len, -1)], axis=-1)
@@ -207,7 +204,7 @@ if __name__ == '__main__':
     n_outer_iter = 20 #200
     n_inner_iter = 1
     time_horizon = 25
-    n_test_traj = 1
+    n_test_traj = 5
     irl_cost_tr, irl_cost_eval, learnable_cost_params = irl_training(robot_model, irl_loss_fn,
                                                                      expert_demo, trajs[1:1+n_test_traj], n_outer_iter, n_inner_iter)
 

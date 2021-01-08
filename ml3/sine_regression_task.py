@@ -13,7 +13,7 @@ from ml3.learnable_losses import ML3_SineRegressionLoss
 
 
 def regular_train(loss_fn, eval_loss_fn, task_model, x_tr, y_tr, exp_cfg):
-    n_iter = exp_cfg['n_inner_iter']
+    n_iter = exp_cfg['n_gradient_steps_at_test']
     lr = exp_cfg['inner_lr']
 
     loss_trace = []
@@ -35,16 +35,15 @@ def regular_train(loss_fn, eval_loss_fn, task_model, x_tr, y_tr, exp_cfg):
 
 def meta_train(meta_loss_model, meta_optimizer, meta_objective, task_sampler_train, task_sampler_test, exp_cfg):
 
-    num_tasks = exp_cfg['num_tasks']
+    num_tasks = exp_cfg['num_train_tasks']
     n_outer_iter= exp_cfg['n_outer_iter']
-    n_inner_iter=exp_cfg['n_inner_iter']
     inner_lr = exp_cfg['inner_lr']
 
     results = []
 
     task_models = []
     task_opts = []
-    for i in range(exp_cfg['num_tasks']):
+    for i in range(num_tasks):
         task_models.append(SineModel(in_dim=exp_cfg['model']['in_dim'],
                                      hidden_dim=exp_cfg['model']['hidden_dim'],
                                      out_dim=1))
@@ -123,7 +122,7 @@ def meta_train(meta_loss_model, meta_optimizer, meta_objective, task_sampler_tra
 
 def eval(task_sampler, exp_cfg, train_loss_fn, eval_loss_fn):
     seed = exp_cfg['seed']
-    num_tasks = exp_cfg['num_tasks']
+    num_tasks = task_sampler.num_tasks_total
 
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -136,7 +135,8 @@ def eval(task_sampler, exp_cfg, train_loss_fn, eval_loss_fn):
         task_model_test = SineModel(in_dim=exp_cfg['model']['in_dim'],
                                     hidden_dim=exp_cfg['model']['hidden_dim'],
                                     out_dim=1)
-        loss = regular_train(loss_fn=train_loss_fn, eval_loss_fn=eval_loss_fn, task_model=task_model_test, x_tr=x[i], y_tr=y[i], exp_cfg=exp_cfg)
+        loss = regular_train(loss_fn=train_loss_fn, eval_loss_fn=eval_loss_fn, task_model=task_model_test,
+                             x_tr=x[i], y_tr=y[i], exp_cfg=exp_cfg)
         yp = task_model_test(x[i])
         l = eval_loss_fn(yp, y[i])
 
@@ -150,7 +150,8 @@ def eval(task_sampler, exp_cfg, train_loss_fn, eval_loss_fn):
 
 def main(exp_cfg):
     seed = exp_cfg['seed']
-    num_tasks = exp_cfg['num_tasks']
+    num_train_tasks = exp_cfg['num_train_tasks']
+    num_test_tasks = exp_cfg['num_test_tasks']
     outer_lr = exp_cfg['outer_lr']
 
     np.random.seed(seed)
@@ -163,12 +164,12 @@ def main(exp_cfg):
 
     meta_objective = nn.MSELoss()
 
-    task_sampler_train = SineTaskSampler(num_tasks_total=num_tasks, num_tasks_per_batch=num_tasks, num_data_points=100,
+    task_sampler_train = SineTaskSampler(num_tasks_total=num_train_tasks, num_tasks_per_batch=num_train_tasks, num_data_points=100,
                                                amp_range=[1.0, 1.0],
                                                input_range=[-2.0, 2.0],
     )
 
-    task_sampler_test = SineTaskSampler(num_tasks_total=num_tasks, num_tasks_per_batch=num_tasks, num_data_points=100,
+    task_sampler_test = SineTaskSampler(num_tasks_total=num_test_tasks, num_tasks_per_batch=num_test_tasks, num_data_points=100,
                                               input_range=[-5.0, 5.0],
                                               amp_range=[0.2, 5.0],
                                               phase_range=[-np.pi, np.pi]
@@ -190,9 +191,10 @@ def main(exp_cfg):
 if __name__ == "__main__":
     exp_cfg = {}
     exp_cfg['seed'] = 0
-    exp_cfg['num_tasks'] = 10
-    exp_cfg['n_outer_iter'] = 2000
-    exp_cfg['n_inner_iter'] = 100
+    exp_cfg['num_train_tasks'] = 1
+    exp_cfg['num_test_tasks'] = 10
+    exp_cfg['n_outer_iter'] = 500
+    exp_cfg['n_gradient_steps_at_test'] = 100
     exp_cfg['inner_lr'] = 0.001
     exp_cfg['outer_lr'] = 0.001
 
@@ -207,13 +209,6 @@ if __name__ == "__main__":
     model_arch_str = str(exp_cfg['model']['hidden_dim'])
     meta_arch_str = "{}".format(exp_cfg['metaloss']['hidden_dim'])
     exp_cfg['log_dir'] = "sin_cos_exp"
-    exp_file = "mt_new_seed_{}_model_arch_{}_meta_arch_{}_num_tasks_{}_n_inner_iter_{}_inner_lr_{}_outer_lr_{}.pkl".format(exp_cfg['seed'],
-                                                                                                                    model_arch_str,
-                                                                                                                    meta_arch_str,
-                                                                                                                    exp_cfg['num_tasks'],
-                                                                                                                    exp_cfg['n_inner_iter'],
-                                                                                                                    exp_cfg['inner_lr'],
-                                                                                                                    exp_cfg['outer_lr']
-                                                                                                         )
+    exp_file = "sine_regression_seed_{}.pkl".format(exp_cfg['seed'])
     exp_cfg['exp_log_file_name'] = exp_file
     main(exp_cfg)

@@ -16,15 +16,11 @@ from mbirl.learnable_costs import *
 import mbirl
 
 
-class IRLLoss(object):
-    def __call__(self, pred_traj, target_traj):
-        loss = ((pred_traj[:, -9:] - target_traj[:, -9:]) ** 2).sum(dim=0)
-        return loss.mean()
-
-
 def evaluate_action_optimization(learned_loss, robot_model, irl_loss_fn, trajs, n_inner_iter):
     # np.random.seed(cfg.random_seed)
     # torch.manual_seed(cfg.random_seed)
+
+    print(f'Weights: {learned_loss.weights}')
 
     eval_costs = []
     predicted_trajs = []
@@ -36,8 +32,10 @@ def evaluate_action_optimization(learned_loss, robot_model, irl_loss_fn, trajs, 
         expert_demo = traj['desired_keypoints'].reshape(traj_len, -1)
         expert_demo = torch.Tensor(expert_demo)
 
-        keypoint_mpc_wrapper = KeypointMPCWrapper(robot_model)
-        action_optimizer = torch.optim.SGD(keypoint_mpc_wrapper.parameters(), lr=1.0)
+        time_horizon, n_keypt_dim = expert_demo.shape
+
+        keypoint_mpc_wrapper = KeypointMPCWrapper(robot_model, time_horizon=time_horizon - 1, n_keypt_dim=n_keypt_dim)
+        action_optimizer = torch.optim.SGD(keypoint_mpc_wrapper.parameters(), lr=0.001)
 
         for i in range(n_inner_iter):
             action_optimizer.zero_grad()
@@ -104,54 +102,99 @@ for data_type in ['placing', 'reaching']:
     plt.plot(t_mean, color='green', label="Time Dep Weighted Ours")
     plt.fill_between(np.arange(len(t_mean)), t_mean - t_std, t_mean + t_std, color='green', alpha=0.1)
     plt.plot(r_mean, color='violet', label="RBF Weighted Ours")
-    plt.fill_between(np.arange(len(r_mean)), r_mean - r_std, r_mean + r_std, color='violet', alpha=0.1)
+    plt.fill_between(np.arange(len(r_mean)), r_mean - r_std, r_mean + r_std, color='blueviolet', alpha=0.1)
     plt.xlabel("iterations")
-    plt.ylabel("IRL Cost")
+    plt.ylabel("Eval Cost")
     plt.legend()
 
     plt.savefig(f"{model_data_dir}/{data_type}_Eval.png")
 
+    # Get Demo Trajectories
+
+    with open(f'{traj_data_dir}/traj_data_{data_type}.pkl', 'rb') as f:
+        trajs = pickle.load(f)
+
+    n_test_traj = 3
+    n_inner_iter = 1
+    train_trajs = trajs[0:1]
+    # test_trajs = trajs[0:1]
+    test_trajs = trajs[0:0 + n_test_traj]
+
+    traj_len = len(train_trajs[0]['desired_keypoints'])
+    time_horizon, n_keypt_dim = test_trajs[0]['desired_keypoints'].reshape(traj_len, -1).shape
+
+    # Plot predicted traj during training
+
+    plt.figure()
+    print(baseline['fina_pred_traj'].detach().shape)
+
+    plt.scatter(x=train_trajs[0]['desired_keypoints'][:, 0, 0], y=train_trajs[0]['desired_keypoints'][:, 0, 2],
+                color='blue', label='Demo')
+    plt.plot(train_trajs[0]['desired_keypoints'][:, 0, 0],
+             train_trajs[0]['desired_keypoints'][:, 0, 2], color='blue')
+
+    plt.scatter(x=baseline['fina_pred_traj'][:, -n_keypt_dim].detach(),
+                y=baseline['fina_pred_traj'][:, -n_keypt_dim + 2].detach(), color='red', alpha=0.5, label="Baseline", s=100)
+    plt.plot(baseline['fina_pred_traj'][:, -n_keypt_dim].detach(),
+             baseline['fina_pred_traj'][:, -n_keypt_dim + 2].detach(), color='red', alpha=0.5)
+
+    plt.scatter(x=weighted['fina_pred_traj'][:, -n_keypt_dim].detach(),
+                y=weighted['fina_pred_traj'][:, -n_keypt_dim + 2].detach(), color='orange', label="Weighted Ours")
+    plt.plot(weighted['fina_pred_traj'][:, -n_keypt_dim].detach(),
+             weighted['fina_pred_traj'][:, -n_keypt_dim + 2].detach(), color='orange')
+
+    plt.scatter(x=timedep['fina_pred_traj'][:, -n_keypt_dim].detach(),
+                y=timedep['fina_pred_traj'][:, -n_keypt_dim + 2].detach(), color='green',
+                label="Time Dep Weighted Ours")
+    plt.plot(timedep['fina_pred_traj'][:, -n_keypt_dim].detach(),
+             timedep['fina_pred_traj'][:, -n_keypt_dim + 2].detach(), color='green')
+
+    plt.scatter(x=rbf['fina_pred_traj'][:, -n_keypt_dim].detach(),
+                y=rbf['fina_pred_traj'][:, -n_keypt_dim + 2].detach(), color='blueviolet', label="RBF Weighted Ours")
+    plt.plot(rbf['fina_pred_traj'][:, -n_keypt_dim].detach(),
+             rbf['fina_pred_traj'][:, -n_keypt_dim + 2].detach(), color='blueviolet')
+
+    plt.xlabel("X")
+    plt.ylabel("Y")
+    plt.legend()
+
+    plt.savefig(f"{model_data_dir}/{data_type}_pred_train_traj.png")
+
     # Plot trajectories with 1 eval trajectory
 
-    b_weights = baseline['cost_parameters']
-    w_weights = weighted["cost_parameters"]
-    t_weights = timedep["cost_parameters"]
-    r_weights = rbf["cost_parameters"]
+    b_weights = baseline['cost_parameters']['weights']
+    w_weights = weighted["cost_parameters"]['weights']
+    t_weights = timedep["cost_parameters"]['weights']
+    r_weights = rbf["cost_parameters"]['weights_fn.weights']
 
     rel_urdf_path = 'env/kuka_iiwa/urdf/iiwa7_ft_with_obj_keypts.urdf'
     urdf_path = os.path.join(mbirl.__path__[0], rel_urdf_path)
     robot_model = DifferentiableRobotModel(urdf_path=urdf_path, name="kuka_w_obj_keypts")
 
-    with open(f'{traj_data_dir}/traj_data_{data_type}.pkl', 'rb') as f:
-        trajs = pickle.load(f)
-
-    n_test_traj = 5
-    n_inner_iter = 1
-    train_trajs = trajs[0:1]
-    # test_trajs = trajs[0:1]
-    test_trajs = trajs[1:1 + n_test_traj]
-
-    b_eval_losses, b_predicted_trajectories = evaluate_action_optimization(BaselineCost(weights=b_weights),
-                                                                           robot_model=robot_model,
-                                                                           irl_loss_fn=IRLLoss(),
-                                                                           trajs=test_trajs,
-                                                                           n_inner_iter=n_inner_iter)
-    w_eval_losses, w_predicted_trajectories = evaluate_action_optimization(LearnableWeightedCost(weights=w_weights),
-                                                                           robot_model=robot_model,
-                                                                           irl_loss_fn=IRLLoss(),
-                                                                           trajs=test_trajs,
-                                                                           n_inner_iter=n_inner_iter)
-    t_eval_losses, t_predicted_trajectories = evaluate_action_optimization(
-        LearnableTimeDepWeightedCost(weights=t_weights),
+    b_eval_losses, b_predicted_trajectories = evaluate_action_optimization(
+        BaselineCost(dim=n_keypt_dim, weights=b_weights),
         robot_model=robot_model,
-        irl_loss_fn=IRLLoss(),
+        irl_loss_fn=IRLLoss(dim=n_keypt_dim),
         trajs=test_trajs,
         n_inner_iter=n_inner_iter)
-    r_eval_losses, r_predicted_trajectories = evaluate_action_optimization(LearnableRBFWeightedCost(weights=r_weights),
-                                                                           robot_model=robot_model,
-                                                                           irl_loss_fn=IRLLoss(),
-                                                                           trajs=test_trajs,
-                                                                           n_inner_iter=n_inner_iter)
+    w_eval_losses, w_predicted_trajectories = evaluate_action_optimization(
+        LearnableWeightedCost(dim=n_keypt_dim, weights=w_weights),
+        robot_model=robot_model,
+        irl_loss_fn=IRLLoss(dim=n_keypt_dim),
+        trajs=test_trajs,
+        n_inner_iter=n_inner_iter)
+    t_eval_losses, t_predicted_trajectories = evaluate_action_optimization(
+        LearnableTimeDepWeightedCost(dim=n_keypt_dim, time_horizon=time_horizon, weights=t_weights),
+        robot_model=robot_model,
+        irl_loss_fn=IRLLoss(dim=n_keypt_dim),
+        trajs=test_trajs,
+        n_inner_iter=n_inner_iter)
+    r_eval_losses, r_predicted_trajectories = evaluate_action_optimization(
+        LearnableRBFWeightedCost(dim=n_keypt_dim, time_horizon=time_horizon, weights=r_weights),
+        robot_model=robot_model,
+        irl_loss_fn=IRLLoss(dim=n_keypt_dim),
+        trajs=test_trajs,
+        n_inner_iter=n_inner_iter)
 
     plt.close("all")
 
@@ -159,22 +202,25 @@ for data_type in ['placing', 'reaching']:
     for i in range(n_test_traj):
         ax = fig.add_subplot(1, n_test_traj, i + 1, projection='3d')
         print(test_trajs[i]["desired_keypoints"].shape)
-        ax.plot(test_trajs[i]["desired_keypoints"][:, 0, 0], test_trajs[i]["desired_keypoints"][:,0, 1],
+        ax.plot(test_trajs[i]["desired_keypoints"][:, 0, 0], test_trajs[i]["desired_keypoints"][:, 0, 1],
                 test_trajs[i]["desired_keypoints"][:, 0, 2], color='blue', label='Demonstration')
-        ax.plot(b_predicted_trajectories[i, :, -9], b_predicted_trajectories[i, :, -8],
-                b_predicted_trajectories[i, :, -7], color='red', alpha=0.5, label='Baseline')
-        ax.plot(w_predicted_trajectories[i, :, -9], w_predicted_trajectories[i, :, -8],
-                w_predicted_trajectories[i, :, -7], color='orange', label='Weighted Ours')
-        ax.plot(t_predicted_trajectories[i, :, -9], t_predicted_trajectories[i, :, -8],
-                t_predicted_trajectories[i, :, -7], color='green', label='Time Dependent Ours')
-        ax.plot(r_predicted_trajectories[i, :, -9], r_predicted_trajectories[i, :, -8],
-                r_predicted_trajectories[i, :, -7], color='blueviolet', label='RBF Ours')
+        ax.plot(b_predicted_trajectories[i, :, -n_keypt_dim], b_predicted_trajectories[i, :, -n_keypt_dim + 1],
+                b_predicted_trajectories[i, :, -n_keypt_dim + 2], color='red', alpha=0.5, label='Baseline')
+        ax.plot(w_predicted_trajectories[i, :, -n_keypt_dim], w_predicted_trajectories[i, :, -n_keypt_dim + 1],
+                w_predicted_trajectories[i, :, -n_keypt_dim + 2], color='orange', label='Weighted Ours')
+        ax.plot(t_predicted_trajectories[i, :, -n_keypt_dim], t_predicted_trajectories[i, :, -n_keypt_dim + 1],
+                t_predicted_trajectories[i, :, -n_keypt_dim + 2], color='green', label='Time Dependent Ours')
+        ax.plot(r_predicted_trajectories[i, :, -n_keypt_dim], r_predicted_trajectories[i, :, -n_keypt_dim + 1],
+                r_predicted_trajectories[i, :, -n_keypt_dim + 2], color='blueviolet', label='RBF Ours')
         range_x = test_trajs[i]["desired_keypoints"][:, 0, 0].max() - test_trajs[i]["desired_keypoints"][:, 0, 0].min()
         range_y = test_trajs[i]["desired_keypoints"][:, 0, 1].max() - test_trajs[i]["desired_keypoints"][:, 0, 1].min()
         range_z = test_trajs[i]["desired_keypoints"][:, 0, 2].max() - test_trajs[i]["desired_keypoints"][:, 0, 2].min()
         max_range = max(range_x, range_y, range_z)
-        ax.set_xlim([test_trajs[i]["desired_keypoints"][:, 0, 0].min(), test_trajs[i]["desired_keypoints"][:, 0, 0].min() + max_range])
-        ax.set_ylim([test_trajs[i]["desired_keypoints"][:, 0, 1].min(), test_trajs[i]["desired_keypoints"][:, 0, 1].min() + max_range])
-        ax.set_zlim([test_trajs[i]["desired_keypoints"][:, 0, 2].min(), test_trajs[i]["desired_keypoints"][:, 0, 2].min() + max_range])
+        ax.set_xlim([test_trajs[i]["desired_keypoints"][:, 0, 0].min(),
+                     test_trajs[i]["desired_keypoints"][:, 0, 0].min() + max_range])
+        ax.set_ylim([test_trajs[i]["desired_keypoints"][:, 0, 1].min(),
+                     test_trajs[i]["desired_keypoints"][:, 0, 1].min() + max_range])
+        ax.set_zlim([test_trajs[i]["desired_keypoints"][:, 0, 2].min(),
+                     test_trajs[i]["desired_keypoints"][:, 0, 2].min() + max_range])
         ax.legend()
     plt.show()

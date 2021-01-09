@@ -73,6 +73,7 @@ class LearnableRBFWeightedCost(torch.nn.Module):
         super(LearnableRBFWeightedCost, self).__init__()
         self.dim = dim
         self.weights_fn = RBFWeights(time_horizon=time_horizon, dim=dim, width=width, weights=weights)
+        self.weights = self.weights_fn()
 
     def forward(self, y_in, y_target):
         assert y_in.dim() == 2
@@ -96,3 +97,12 @@ class BaselineCost(object):
         # weighted mse
         wmse = mse * self.weights
         return wmse.mean()
+
+
+class IRLLoss(object):
+    def __init__(self, dim):
+        self.dim = dim
+
+    def __call__(self, pred_traj, target_traj):
+        loss = ((pred_traj[:, -self.dim:] - target_traj[:, -self.dim:]) ** 2).sum(dim=0)
+        return loss.mean()

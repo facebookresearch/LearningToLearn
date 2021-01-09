@@ -116,7 +116,7 @@ def irl_training(learnable_cost, robot_model, irl_loss_fn, expert_demo, start_po
 
         learnable_cost_opt.step()
 
-        if outer_i % 25 == 0:
+        if outer_i % 250 == 0:
             plt.figure()
             plt.plot(pred_traj[:, 7].detach(), pred_traj[:, 9].detach(), 'o')
             plt.plot(expert_demo[:, 0], expert_demo[:, 2], 'x')
@@ -129,6 +129,11 @@ def irl_training(learnable_cost, robot_model, irl_loss_fn, expert_demo, start_po
         learnable_cost_params = {}
         for name, param in learnable_cost.named_parameters():
             learnable_cost_params[name] = param
+
+        if len(learnable_cost_params) == 0:
+            # For RBF Weighted Cost
+            for name, param in learnable_cost.weights_fn.named_parameters():
+                learnable_cost_params[name] = param
 
     return torch.stack(irl_cost_tr), torch.stack(irl_cost_eval), learnable_cost_params, pred_traj
 
@@ -161,8 +166,8 @@ if __name__ == '__main__':
 
     # type of cost
     # cost_type = 'Weighted'
-    cost_type = 'TimeDep'
-    # cost_type = 'RBF'
+    # cost_type = 'TimeDep'
+    cost_type = 'RBF'
 
     learnable_cost = None
 

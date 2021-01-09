@@ -23,7 +23,7 @@ class QPoptimizer(object):
         w = cp.Variable(feature_num)
         obj_func = cp.Minimize(cp.norm(w))
         # ToDO; why is this constraint >= 1.0, the code from the link above has a different constraint?
-        constraints = [(expert.detach().numpy()-learner.detach().numpy()) @ w >= 1]
+        constraints = [(expert.detach().numpy() - learner.detach().numpy()) @ w >= 1]
 
         prob = cp.Problem(obj_func, constraints)
         prob.solve()
@@ -31,17 +31,16 @@ class QPoptimizer(object):
         if prob.status == "optimal":
             weights = np.squeeze(np.asarray(w.value))
             norm = np.linalg.norm(weights)
-            weights = weights/norm
+            weights = weights / norm
             return weights, prob.value
         else:
             weights = np.zeros(feature_num)
             return weights, prob.status
 
 
-
 class IRLLoss(object):
     def __call__(self, pred_traj, target_traj):
-        loss = ((pred_traj[:,-6:] - target_traj[:,-6:])**2).sum(dim=0)
+        loss = ((pred_traj[:, -6:] - target_traj[:, -6:]) ** 2).sum(dim=0)
         return loss.mean()
 
 
@@ -62,7 +61,7 @@ def extract_feature_expectations(keypoint_trajectory, goal_keypts):
     # we use the keypoints distance to goal keypots as features
     # this is analogous to our learnable cost function
     for t in range(T):
-        exp_feat += gamma**t * (keypoint_trajectory[t, :] - goal_keypts)**2
+        exp_feat += gamma ** t * (keypoint_trajectory[t, :] - goal_keypts) ** 2
 
     return exp_feat
 
@@ -81,7 +80,7 @@ def evaluate_action_optimization(weights, robot_model, irl_loss_fn, trajs, n_inn
         expert_demo = torch.Tensor(expert_demo)
         time_horizon, n_keypt_dim = expert_demo.shape
         keypoint_mpc_wrapper = KeypointMPCWrapper(robot_model, time_horizon=time_horizon - 1, n_keypt_dim=n_keypt_dim)
-        action_optimizer = torch.optim.SGD(keypoint_mpc_wrapper.parameters(), lr=1.0)
+        action_optimizer = torch.optim.SGD(keypoint_mpc_wrapper.parameters(), lr=0.001)
 
         for i in range(n_inner_iter):
             action_optimizer.zero_grad()
@@ -100,15 +99,13 @@ def evaluate_action_optimization(weights, robot_model, irl_loss_fn, trajs, n_inn
 
 
 def irl_training(robot_model, irl_loss_fn, expert_demo, start_joint_state, test_trajs, n_outer_iter, n_inner_iter):
-
     irl_cost_tr = []
     irl_cost_eval = []
 
     cost_optimizer = QPoptimizer()
     time_horizon, n_keypt_dim = expert_demo.shape
     keypoint_mpc_wrapper = KeypointMPCWrapper(robot_model, time_horizon=time_horizon - 1, n_keypt_dim=n_keypt_dim)
-
-    action_optimizer = torch.optim.SGD(keypoint_mpc_wrapper.parameters(), lr=1.0)
+    action_optimizer = torch.optim.SGD(keypoint_mpc_wrapper.parameters(), lr=0.001)
 
     goal_keypts = expert_demo[-1, -n_keypt_dim:].clone()
 
@@ -133,7 +130,6 @@ def irl_training(robot_model, irl_loss_fn, expert_demo, start_joint_state, test_
 
         # we use the current "reward/cost" weight vector to optimize an action sequence
         for idx in range(n_inner_iter):
-
             # unroll and extract expected features
             pred_traj = keypoint_mpc_wrapper.roll_out(start_joint_state.clone())
             phi = extract_feature_expectations(pred_traj[:, -n_keypt_dim:], goal_keypts)
@@ -142,7 +138,7 @@ def irl_training(robot_model, irl_loss_fn, expert_demo, start_joint_state, test_
             action_optimizer.zero_grad()
 
             # update the actions, given the current weights
-            cost = (phi*weight).sum()
+            cost = (phi * weight).sum()
             cost.backward(retain_graph=True)
             action_optimizer.step()
 
@@ -151,18 +147,18 @@ def irl_training(robot_model, irl_loss_fn, expert_demo, start_joint_state, test_
 
         # compute irl loss, solely for comparing to our method
         irl_cost_tr.append(irl_loss_fn(pred_traj, expert_demo).mean())
-        print("irl loss outer iter: {} loss: {}".format(outer_iter+1, irl_cost_tr[-1]))
+        print("irl loss outer iter: {} loss: {}".format(outer_iter + 1, irl_cost_tr[-1]))
 
         # check convergence
-        hyper_distance = np.abs(np.dot(W, expert_features.detach()-phi.detach())) #hyperdistance = t
-        if hyper_distance <= params['epsilon']: # terminate if the point reached close enough
+        hyper_distance = np.abs(np.dot(W, expert_features.detach() - phi.detach()))  # hyperdistance = t
+        if hyper_distance <= params['epsilon']:  # terminate if the point reached close enough
             break
 
         eval_costs = evaluate_action_optimization(torch.Tensor(W), robot_model, irl_loss_fn, test_trajs,
                                                   n_inner_iter)
         irl_cost_eval.append(eval_costs)
 
-    return torch.stack(irl_cost_tr), torch.stack(irl_cost_eval), torch.Tensor(W)
+    return torch.stack(irl_cost_tr), torch.stack(irl_cost_eval), {'weights': torch.Tensor(W)}, pred_traj
 
 
 if __name__ == '__main__':
@@ -171,7 +167,7 @@ if __name__ == '__main__':
     torch.manual_seed(0)
 
     rest_pose = [0.0, 0.0, 0.0, 1.57079633, 0.0, 1.03672558, 0.0]
-    joint_limits = [2.967,2.094,2.967,2.094,2.967,2.094,3.054]
+    joint_limits = [2.967, 2.094, 2.967, 2.094, 2.967, 2.094, 3.054]
 
     rel_urdf_path = 'env/kuka_iiwa/urdf/iiwa7_ft_with_obj_keypts.urdf'
     urdf_path = os.path.join(mbirl.__path__[0], rel_urdf_path)
@@ -195,7 +191,7 @@ if __name__ == '__main__':
     start_q = traj['start_joint_config'].squeeze()
     expert_demo = traj['desired_keypoints'].reshape(traj_len, -1)
     expert_demo = torch.Tensor(expert_demo)
-    print(expert_demo.shape)
+    print('expert demo shape', expert_demo.shape, traj['desired_keypoints'].shape)
 
     no_demos = 1
 
@@ -203,11 +199,14 @@ if __name__ == '__main__':
     # compare progress to our algorithm
     irl_loss_fn = IRLLoss()
 
-    n_outer_iter = 100 #200
-    n_inner_iter = 1
+    n_outer_iter = 1000  # 200
+    n_inner_iter = 10
     time_horizon = 10
     n_test_traj = 5
-    irl_cost_tr, irl_cost_eval, learnable_cost_params = irl_training(robot_model, irl_loss_fn,expert_demo, start_q, trajs[1:1+n_test_traj],n_outer_iter, n_inner_iter)
+    irl_cost_tr, irl_cost_eval, learnable_cost_params, pred_traj = irl_training(robot_model, irl_loss_fn, expert_demo,
+                                                                                start_q,
+                                                                                trajs[1:1 + n_test_traj], n_outer_iter,
+                                                                                n_inner_iter)
 
     if not os.path.exists(model_data_dir):
         os.makedirs(model_data_dir)
@@ -215,7 +214,6 @@ if __name__ == '__main__':
     torch.save({
         'irl_cost_tr': irl_cost_tr,
         'irl_cost_eval': irl_cost_eval,
-        'cost_parameters': learnable_cost_params
+        'cost_parameters': learnable_cost_params,
+        'fina_pred_traj': pred_traj
     }, f=f'{model_data_dir}/{data_type}_Abbeel')
-
-

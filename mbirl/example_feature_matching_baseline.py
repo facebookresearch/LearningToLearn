@@ -30,21 +30,24 @@ class QPoptimizer(object):
 
         if prob.status == "optimal":
             weights = np.squeeze(np.asarray(w.value))
+            norm = np.linalg.norm(weights)
+            weights = weights/norm
             return weights, prob.value
         else:
             weights = np.zeros(feature_num)
             return weights, prob.status
 
 
+
 class IRLLoss(object):
     def __call__(self, pred_traj, target_traj):
-        loss = ((pred_traj[:,-9:] - target_traj[:,-9:])**2).sum(dim=0)
+        loss = ((pred_traj[:,-6:] - target_traj[:,-6:])**2).sum(dim=0)
         return loss.mean()
 
 
 def learned_loss(pred_traj, target_traj, weights):
     assert pred_traj.dim() == 2
-    mse = ((pred_traj[:, -9:] - target_traj[-9:]) ** 2).squeeze()
+    mse = ((pred_traj[:, -6:] - target_traj[-6:]) ** 2).squeeze()
 
     # weighted mse
     wmse = mse * weights
@@ -76,8 +79,8 @@ def evaluate_action_optimization(weights, robot_model, irl_loss_fn, trajs, n_inn
         start_pose = traj['start_joint_config'].squeeze()
         expert_demo = traj['desired_keypoints'].reshape(traj_len, -1)
         expert_demo = torch.Tensor(expert_demo)
-
-        keypoint_mpc_wrapper = KeypointMPCWrapper(robot_model)
+        time_horizon, n_keypt_dim = expert_demo.shape
+        keypoint_mpc_wrapper = KeypointMPCWrapper(robot_model, time_horizon=time_horizon - 1, n_keypt_dim=n_keypt_dim)
         action_optimizer = torch.optim.SGD(keypoint_mpc_wrapper.parameters(), lr=1.0)
 
         for i in range(n_inner_iter):
@@ -102,16 +105,18 @@ def irl_training(robot_model, irl_loss_fn, expert_demo, start_joint_state, test_
     irl_cost_eval = []
 
     cost_optimizer = QPoptimizer()
-    keypoint_mpc_wrapper = KeypointMPCWrapper(robot_model)
+    time_horizon, n_keypt_dim = expert_demo.shape
+    keypoint_mpc_wrapper = KeypointMPCWrapper(robot_model, time_horizon=time_horizon - 1, n_keypt_dim=n_keypt_dim)
+
     action_optimizer = torch.optim.SGD(keypoint_mpc_wrapper.parameters(), lr=1.0)
 
-    goal_keypts = expert_demo[-1, -9:].clone()
+    goal_keypts = expert_demo[-1, -n_keypt_dim:].clone()
 
     expert_features = extract_feature_expectations(expert_demo, goal_keypts)
 
     # unroll and extract expected features
     pred_traj = keypoint_mpc_wrapper.roll_out(start_joint_state.clone())
-    phi = extract_feature_expectations(pred_traj[:, -9:], goal_keypts)
+    phi = extract_feature_expectations(pred_traj[:, -n_keypt_dim:], goal_keypts)
 
     # get initial irl loss
     irl_cost_tr.append(irl_loss_fn(pred_traj, expert_demo).mean())
@@ -131,7 +136,7 @@ def irl_training(robot_model, irl_loss_fn, expert_demo, start_joint_state, test_
 
             # unroll and extract expected features
             pred_traj = keypoint_mpc_wrapper.roll_out(start_joint_state.clone())
-            phi = extract_feature_expectations(pred_traj[:, -9:], goal_keypts)
+            phi = extract_feature_expectations(pred_traj[:, -n_keypt_dim:], goal_keypts)
 
             # reset gradients
             action_optimizer.zero_grad()
@@ -202,9 +207,7 @@ if __name__ == '__main__':
     n_inner_iter = 1
     time_horizon = 10
     n_test_traj = 5
-    irl_cost_tr, irl_cost_eval, learnable_cost_params = irl_training(robot_model, irl_loss_fn,
-                                                                     expert_demo, start_q, trajs[1:1+n_test_traj],
-                                                                     n_outer_iter, n_inner_iter)
+    irl_cost_tr, irl_cost_eval, learnable_cost_params = irl_training(robot_model, irl_loss_fn,expert_demo, start_q, trajs[1:1+n_test_traj],n_outer_iter, n_inner_iter)
 
     if not os.path.exists(model_data_dir):
         os.makedirs(model_data_dir)

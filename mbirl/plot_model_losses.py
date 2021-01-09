@@ -125,7 +125,7 @@ for data_type in ['placing', 'reaching']:
     with open(f'{traj_data_dir}/traj_data_{data_type}.pkl', 'rb') as f:
         trajs = pickle.load(f)
 
-    n_test_traj = 1
+    n_test_traj = 5
     n_inner_iter = 1
     train_trajs = trajs[0:1]
     # test_trajs = trajs[0:1]
@@ -160,15 +160,15 @@ for data_type in ['placing', 'reaching']:
         ax = fig.add_subplot(1, n_test_traj, i + 1, projection='3d')
         print(test_trajs[i]["desired_keypoints"].shape)
         ax.plot(test_trajs[i]["desired_keypoints"][:, 0, 0], test_trajs[i]["desired_keypoints"][:,0, 1],
-                test_trajs[i]["desired_keypoints"][:, 0, 2], color='blue')
+                test_trajs[i]["desired_keypoints"][:, 0, 2], color='blue', label='Demonstration')
         ax.plot(b_predicted_trajectories[i, :, -9], b_predicted_trajectories[i, :, -8],
-                b_predicted_trajectories[i, :, -7], color='red', alpha=0.5)
+                b_predicted_trajectories[i, :, -7], color='red', alpha=0.5, label='Baseline')
         ax.plot(w_predicted_trajectories[i, :, -9], w_predicted_trajectories[i, :, -8],
-                w_predicted_trajectories[i, :, -7], color='orange')
+                w_predicted_trajectories[i, :, -7], color='orange', label='Weighted Ours')
         ax.plot(t_predicted_trajectories[i, :, -9], t_predicted_trajectories[i, :, -8],
-                t_predicted_trajectories[i, :, -7], color='green')
+                t_predicted_trajectories[i, :, -7], color='green', label='Time Dependent Ours')
         ax.plot(r_predicted_trajectories[i, :, -9], r_predicted_trajectories[i, :, -8],
-                r_predicted_trajectories[i, :, -7], color='blueviolet')
+                r_predicted_trajectories[i, :, -7], color='blueviolet', label='RBF Ours')
         range_x = test_trajs[i]["desired_keypoints"][:, 0, 0].max() - test_trajs[i]["desired_keypoints"][:, 0, 0].min()
         range_y = test_trajs[i]["desired_keypoints"][:, 0, 1].max() - test_trajs[i]["desired_keypoints"][:, 0, 1].min()
         range_z = test_trajs[i]["desired_keypoints"][:, 0, 2].max() - test_trajs[i]["desired_keypoints"][:, 0, 2].min()
@@ -176,4 +176,5 @@ for data_type in ['placing', 'reaching']:
         ax.set_xlim([test_trajs[i]["desired_keypoints"][:, 0, 0].min(), test_trajs[i]["desired_keypoints"][:, 0, 0].min() + max_range])
         ax.set_ylim([test_trajs[i]["desired_keypoints"][:, 0, 1].min(), test_trajs[i]["desired_keypoints"][:, 0, 1].min() + max_range])
         ax.set_zlim([test_trajs[i]["desired_keypoints"][:, 0, 2].min(), test_trajs[i]["desired_keypoints"][:, 0, 2].min() + max_range])
+        ax.legend()
     plt.show()

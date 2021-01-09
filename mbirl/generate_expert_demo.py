@@ -79,8 +79,9 @@ def generate_demo_traj(rest_pose, goal_ee, policy):
         loss = loss.mean() + 0.5*(policy.action ** 2).mean()
         policy.optimizer.zero_grad()
         loss.backward(retain_graph=True)
+        print(loss)
         policy.optimizer.step()
-    print('keypoint', key_pos[12, -3:])
+    print('keypoint', key_pos[5, -3:])
     print('goal1', goal_keypts1)
     print('keypoint', key_pos[-1, -3:])
     print('goal2', goal_keypts2)
@@ -189,8 +190,10 @@ if __name__ == '__main__':
                     goal_ee_list[:5, i, 0] = torch.linspace(start_keypts[i, 0], goal_keypts1[i, 0], 5)
                     goal_ee_list[5:, i, 2] = torch.linspace(goal_keypts1[i, 2], goal_keypts2[i, 2], 5)
 
+            qs, keypoints, actions = generate_demo_traj(rest_pose, goal_ee_list, policy)
             traj_data['start_joint_config'] = rest_pose
             traj_data['desired_keypoints'] = goal_ee_list
+            traj_data['keypoints'] = keypoints
             trajectories.append(traj_data)
 
         with open(f'{traj_data_dir}/traj_data_{data_type}.pkl', "wb") as fp:
@@ -206,10 +209,13 @@ if __name__ == '__main__':
     fig = plt.figure(figsize=(2 * 5, int(np.ceil(n_trajs/2)) * 5))
     for i, traj in enumerate(trajs):
         ax = fig.add_subplot(2, int(np.ceil(n_trajs/2)), i + 1, projection='3d')
-        ax.plot(trajs[i]['desired_keypoints'][1:, 0, 0], trajs[i]['desired_keypoints'][1:, 0, 1], trajs[i]['desired_keypoints'][1:, 0, 2])
-        ax.scatter(trajs[i]['desired_keypoints'][1:, 0, 0], trajs[i]['desired_keypoints'][1:, 0, 1], trajs[i]['desired_keypoints'][1:, 0, 2],
+        ax.plot(trajs[i]['keypoints'][1:, 0, 0], trajs[i]['keypoints'][1:, 0, 1], trajs[i]['keypoints'][1:, 0, 2], color='orange')
+        ax.scatter(trajs[i]['keypoints'][1:, 0, 0], trajs[i]['keypoints'][1:, 0, 1], trajs[i]['keypoints'][1:, 0, 2],
+                   color='orange')
+        ax.plot(trajs[i]['desired_keypoints'][:, 0, 0], trajs[i]['desired_keypoints'][:, 0, 1], trajs[i]['desired_keypoints'][:, 0, 2])
+        ax.scatter(trajs[i]['desired_keypoints'][:, 0, 0], trajs[i]['desired_keypoints'][:, 0, 1], trajs[i]['desired_keypoints'][:, 0, 2],
                    color='blue')
-        ax.scatter(trajs[i]['desired_keypoints'][1, 0, 0], trajs[i]['desired_keypoints'][1, 0, 1], trajs[i]['desired_keypoints'][1, 0, 2],
+        ax.scatter(start_keypts[0, 0], start_keypts[0, 1], start_keypts[0, 2],
                    color='red')
         ax.scatter(trajs[i]['desired_keypoints'][-1, 0, 0], trajs[i]['desired_keypoints'][-1, 0, 1], trajs[i]['desired_keypoints'][-1, 0, 2],
                    color='green')

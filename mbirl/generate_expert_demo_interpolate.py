@@ -74,11 +74,12 @@ class ActionNetwork(torch.nn.Module):
 def generate_demo_traj(rest_pose, goal_ee, policy):
     joint_state = rest_pose
     for epoch in range(100):
+        policy.optimizer.zero_grad()
         qs, key_pos = policy.roll_out(joint_state.clone())
         loss = ((key_pos[1:, -3:] - torch.Tensor(goal_ee)) ** 2).mean(dim=0)
-        loss = loss.mean() + 0.5*(policy.action ** 2).mean()
-        policy.optimizer.zero_grad()
-        loss.backward(retain_graph=True)
+        loss = loss.mean() + 0.0*(policy.action ** 2).mean()
+        print(loss)
+        loss.backward()
         policy.optimizer.step()
     print('keypoint', key_pos[5, -3:])
     print('goal1', goal_ee1)

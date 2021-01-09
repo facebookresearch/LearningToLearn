@@ -289,20 +289,7 @@
       <material name="Black"/>
     </visual>
   </link>
-  <!-- virtual ee_link  -->
-   <joint name="iiwa_joint_ee" type="fixed">
-    <parent link="iiwa_link_fts"/>
-    <child link="iiwa_link_ee"/>
-    <origin rpy="0 0 0" xyz="0 0 0.045"/>
-  </joint>
-  <link name="iiwa_link_ee">
-    <inertial>
-      <origin rpy="0 0 0" xyz="0 0 0"/>
-      <mass value="0"/>
-      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
-    </inertial>
-  </link>
-  <!-- virtual ee_link  -->
+
   <link name="kp_link_1">
     <contact>
       <lateral_friction value="0.8"/>
@@ -330,7 +317,6 @@
       </geometry>
     </collision>
   </link>
-
 
   <link name="kp_link_2">
     <contact>
@@ -387,22 +373,23 @@
     </collision>
   </link>
 
-  <joint name="keypoint_2" type="fixed">
-    <parent link="kp_link_2"/>
+  <joint name="keypoint_1" type="fixed">
+    <parent link="iiwa_link_fts"/>
     <child link="kp_link_1"/>
-    <origin rpy="0 0 0" xyz="0 0.0 0.05"/>
+    <origin rpy="0 0 0" xyz="0 0 0.05"/>
   </joint>
 
-  <joint name="keypoint_1" type="fixed">
-    <parent link="kp_link_3"/>
+  <joint name="keypoint_2" type="fixed">
+    <parent link="kp_link_1"/>
     <child link="kp_link_2"/>
     <origin rpy="0 0 0" xyz="0 0.0 0.05"/>
   </joint>
 
-  <joint name="iiwa_joint_ee" type="fixed">
-    <parent link="iiwa_link_ee"/>
+  <joint name="keypoint_3" type="fixed">
+    <parent link="kp_link_2"/>
     <child link="kp_link_3"/>
-    <origin rpy="0 0 0" xyz="0 0 0.05"/>
+    <origin rpy="0 0 0" xyz="0 0.0 0.05"/>
   </joint>
+
 
 </robot>

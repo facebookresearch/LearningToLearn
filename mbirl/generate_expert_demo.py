@@ -28,17 +28,17 @@ class GroundTruthForwardModel(torch.nn.Module):
         xdesired = x + u
 
         keypoints = []
-        for link in [1, 2, 3]:
+        for link in [1, 2]:#, 3]:
             kp_pos, kp_rot = self.robot_model.compute_forward_kinematics(xdesired, 'kp_link_' + str(link))
-            keypoints += kp_pos
+            keypoints += 100.0*kp_pos
 
         return torch.stack(keypoints).squeeze()
 
     def forward_kin(self, x):
         keypoints = []
-        for link in [1, 2, 3]:
+        for link in [1, 2]:  # , 3]:
             kp_pos, kp_rot = self.robot_model.compute_forward_kinematics(x, 'kp_link_' + str(link))
-            keypoints += kp_pos
+            keypoints += 100.0*kp_pos
 
         return torch.stack(keypoints).squeeze()
 
@@ -163,7 +163,7 @@ if __name__ == '__main__':
     data_type = 'placing'
     # data_type = 'reaching'
 
-    regenerate_data = False
+    regenerate_data = True
 
     if not os.path.exists(traj_data_dir):
         os.makedirs(traj_data_dir)
@@ -174,20 +174,21 @@ if __name__ == '__main__':
             print(traj_it)
             traj_data = {}
             goal_keypts1 = start_keypts[-3:].clone()
-            goal_keypts1[:, 0] = goal_keypts1[:, 0] + torch.Tensor(np.random.uniform(-0.4, -0.3, 1))
+            goal_keypts1[:, 0] = goal_keypts1[:, 0] + torch.Tensor(np.random.uniform(-0.25, -0.15, 1)*100.0)
             goal_keypts2 = goal_keypts1.clone()
-            goal_keypts2[:, 2] = goal_keypts2[:, 2] + torch.Tensor(np.random.uniform(-0.5, -0.4, 1))
+            goal_keypts2[:, 2] = goal_keypts2[:, 2] + torch.Tensor(np.random.uniform(-0.3, -0.2, 1)*100.0)
 
             if data_type == 'reaching':
                 goal_ee_list = torch.stack([start_keypts.clone() for i in range(10)])
             else:
                 goal_ee_list = torch.stack([start_keypts.clone() for i in range(5)] + [goal_keypts1.clone() for i in range(5)])
-            for i in range(3):
+
+            for kp_idx in range(2):
                 if data_type == 'reaching':
-                    goal_ee_list[:, i, 0] = torch.linspace(start_keypts[i, 0], goal_keypts1[i, 0], 10)
+                    goal_ee_list[:, kp_idx, 0] = torch.linspace(start_keypts[kp_idx, 0], goal_keypts1[kp_idx, 0], 10)
                 else:
-                    goal_ee_list[:5, i, 0] = torch.linspace(start_keypts[i, 0], goal_keypts1[i, 0], 5)
-                    goal_ee_list[5:, i, 2] = torch.linspace(goal_keypts1[i, 2], goal_keypts2[i, 2], 5)
+                    goal_ee_list[:5, kp_idx, 0] = torch.linspace(start_keypts[kp_idx, 0], goal_keypts1[kp_idx, 0], 5)
+                    goal_ee_list[5:, kp_idx, 2] = torch.linspace(goal_keypts1[kp_idx, 2], goal_keypts2[kp_idx, 2], 5)
 
             traj_data['start_joint_config'] = rest_pose
             traj_data['desired_keypoints'] = goal_ee_list
@@ -213,9 +214,9 @@ if __name__ == '__main__':
                    color='red')
         ax.scatter(trajs[i]['desired_keypoints'][-1, 0, 0], trajs[i]['desired_keypoints'][-1, 0, 1], trajs[i]['desired_keypoints'][-1, 0, 2],
                    color='green')
-        min_x = -1.0; max_x = -0.5
-        min_y = 0.0; max_y = 0.3
-        min_z = 0.5; max_z = 1.0
+        min_x = -100.0; max_x = -50.0
+        min_y = 0.0; max_y = 30
+        min_z = 50; max_z = 100
         ax.set_xlim([min_x, max_x])
         ax.set_ylim([min_y, max_y])
         ax.set_zlim([min_z, max_z])

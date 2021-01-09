@@ -22,7 +22,7 @@ class QPoptimizer(object):
     def __call__(self, feature_num, learner, expert):
         w = cp.Variable(feature_num)
         obj_func = cp.Minimize(cp.norm(w))
-
+        # ToDO; why is this constraint >= 1.0, the code from the link above has a different constraint?
         constraints = [(expert.detach().numpy()-learner.detach().numpy()) @ w >= 1]
 
         prob = cp.Problem(obj_func, constraints)

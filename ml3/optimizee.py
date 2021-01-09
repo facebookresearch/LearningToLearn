@@ -5,6 +5,42 @@ import torch.nn as nn
 from ml3.envs.mountain_car import MountainCar
 
 
+def weight_init(module):
+    if isinstance(module, nn.Linear):
+        nn.init.xavier_uniform_(module.weight, gain=1.0)
+        if module.bias is not None:
+            module.bias.data.zero_()
+
+
+def weight_reset(m):
+    if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
+        m.reset_parameters()
+
+
+class SineModel(nn.Module):
+
+    def __init__(self, in_dim, hidden_dim, out_dim):
+        super(SineModel, self).__init__()
+        net_dim = [in_dim] + hidden_dim
+
+        layers = []
+
+        for i in range(1, len(net_dim)):
+            layers.append(nn.Linear(net_dim[i-1], net_dim[i]))
+            layers.append(nn.ReLU())
+
+        self.layers = nn.Sequential(*layers)
+        self.mean_pred = nn.Linear(hidden_dim[-1], out_dim)
+
+    def reset(self):
+        self.layers.apply(weight_init)
+        self.mean_pred.apply(weight_init)
+
+    def forward(self, x):
+        feat = self.layers(x)
+        return self.mean_pred(feat)
+
+
 class MC_Policy(nn.Module):
 
     def __init__(self, pi_in, pi_out):

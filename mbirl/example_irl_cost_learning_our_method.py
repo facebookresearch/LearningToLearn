@@ -119,7 +119,7 @@ def irl_training(learnable_cost, robot_model, irl_loss_fn, expert_demo, start_po
         if outer_i % 25 == 0:
             plt.figure()
             plt.plot(pred_traj[:, 7].detach(), pred_traj[:, 9].detach(), 'o')
-            plt.plot(expert_demo[:, 0], expert_demo[:, 2], 'o')
+            plt.plot(expert_demo[:, 0], expert_demo[:, 2], 'x')
             plt.title("outer i: {}".format(outer_i))
             plt.show()
 
@@ -161,8 +161,8 @@ if __name__ == '__main__':
 
     # type of cost
     # cost_type = 'Weighted'
-    # cost_type = 'TimeDep'
-    cost_type = 'RBF'
+    cost_type = 'TimeDep'
+    # cost_type = 'RBF'
 
     learnable_cost = None
 

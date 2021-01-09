@@ -28,7 +28,7 @@ class LearnableTimeDepWeightedCost(torch.nn.Module):
     def __init__(self, time_horizon, dim=9, weights=None):
         super(LearnableTimeDepWeightedCost, self).__init__()
         if weights is None:
-            self.weights = torch.nn.Parameter(0.1 * torch.ones([time_horizon, dim]))
+            self.weights = torch.nn.Parameter(0.01 * torch.ones([time_horizon, dim]))
         else:
             self.weights = weights
         self.clip = torch.nn.ReLU()
@@ -39,7 +39,8 @@ class LearnableTimeDepWeightedCost(torch.nn.Module):
         assert y_in.dim() == 2
         mse = ((y_in[:,-self.dim:] - y_target[-self.dim:]) ** 2).squeeze()
         # weighted mse
-        wmse = mse * self.clip(self.weights)
+        #wmse = mse * self.clip(self.weights)
+        wmse = mse * self.weights
         return wmse.mean()
 
 

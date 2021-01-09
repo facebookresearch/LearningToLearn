@@ -191,10 +191,8 @@ if __name__ == '__main__':
                     goal_ee_list[:5, kp_idx, 0] = torch.linspace(start_keypts[kp_idx, 0], goal_keypts1[kp_idx, 0], 5)
                     goal_ee_list[5:, kp_idx, 2] = torch.linspace(goal_keypts1[kp_idx, 2], goal_keypts2[kp_idx, 2], 5)
 
-            qs, keypoints, actions = generate_demo_traj(rest_pose, goal_ee_list, policy)
             traj_data['start_joint_config'] = rest_pose
             traj_data['desired_keypoints'] = goal_ee_list
-            traj_data['keypoints'] = keypoints
             trajectories.append(traj_data)
 
         with open(f'{traj_data_dir}/traj_data_{data_type}.pkl', "wb") as fp:

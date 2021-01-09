@@ -19,7 +19,8 @@ class LearnableWeightedCost(torch.nn.Module):
         mse = ((y_in[:,-self.dim:] - y_target[-self.dim:]) ** 2).squeeze()
 
         # weighted mse
-        wmse = torch.mm(mse, self.clip(self.weights))
+        #wmse = torch.mm(mse, self.clip(self.weights))
+        wmse = torch.mm(mse, self.weights)
         return wmse.mean()
 
 

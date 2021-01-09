@@ -71,27 +71,6 @@ class ActionNetwork(torch.nn.Module):
         return torch.stack(qs), torch.stack(key_pos)
 
 
-def generate_demo_traj(rest_pose, goal_ee, policy):
-    joint_state = rest_pose
-    for epoch in range(100):
-        qs, key_pos = policy.roll_out(joint_state.clone())
-        loss = ((key_pos[1:, -3:] - torch.Tensor(goal_ee)) ** 2).mean(dim=0)
-        loss = loss.mean() + 0.5*(policy.action ** 2).mean()
-        policy.optimizer.zero_grad()
-        loss.backward(retain_graph=True)
-        print(loss)
-        policy.optimizer.step()
-    print('keypoint', key_pos[5, -3:])
-    print('goal1', goal_keypts1)
-    print('keypoint', key_pos[-1, -3:])
-    print('goal2', goal_keypts2)
-
-    # collect trajectory info
-    qs, key_pos = policy.roll_out(joint_state.clone())
-    print('roll_out', key_pos[-1, -3:])
-    return qs.detach().numpy(), key_pos.detach().numpy(), policy.action.detach().numpy()
-
-
 def visualize_traj(traj_data, robot_id, sim):
     qs = traj_data['q'].squeeze()
     print(qs.shape)
@@ -208,9 +187,6 @@ if __name__ == '__main__':
     fig = plt.figure(figsize=(2 * 5, int(np.ceil(n_trajs/2)) * 5))
     for i, traj in enumerate(trajs):
         ax = fig.add_subplot(2, int(np.ceil(n_trajs/2)), i + 1, projection='3d')
-        ax.plot(trajs[i]['keypoints'][1:, 0, 0], trajs[i]['keypoints'][1:, 0, 1], trajs[i]['keypoints'][1:, 0, 2], color='orange')
-        ax.scatter(trajs[i]['keypoints'][1:, 0, 0], trajs[i]['keypoints'][1:, 0, 1], trajs[i]['keypoints'][1:, 0, 2],
-                   color='orange')
         ax.plot(trajs[i]['desired_keypoints'][:, 0, 0], trajs[i]['desired_keypoints'][:, 0, 1], trajs[i]['desired_keypoints'][:, 0, 2])
         ax.scatter(trajs[i]['desired_keypoints'][:, 0, 0], trajs[i]['desired_keypoints'][:, 0, 1], trajs[i]['desired_keypoints'][:, 0, 2],
                    color='blue')

@@ -46,5 +46,4 @@ class KeypointMPCWrapper(torch.nn.Module):
         return torch.cat((torch.stack(qs), torch.stack(key_pos)), dim=1)
 
     def reset_actions(self):
-        #self.action_seq.data = torch.randn([self.time_horizon, 7])
         self.action_seq.data = torch.Tensor(np.zeros([self.time_horizon, 7]))

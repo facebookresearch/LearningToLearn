@@ -63,39 +63,55 @@ def evaluate_action_optimization(learned_cost, robot_model, irl_loss_fn, trajs, 
 
 
 # Helper function for the irl learning loop
-def irl_training(learnable_cost, robot_model, irl_loss_fn, expert_demo, start_pose, test_trajs, n_outer_iter, n_inner_iter):
+def irl_training(learnable_cost, robot_model, irl_loss_fn, train_trajs, test_trajs, n_outer_iter, n_inner_iter):
 
-    time_horizon, n_keypt_dim = expert_demo.shape
-    #learnable_cost_opt = torch.optim.RMSprop(learnable_cost.parameters(), lr=1e-2)
-    learnable_cost_opt = torch.optim.Adam(learnable_cost.parameters(), lr=1e-2)#, amsgrad=True)
-    keypoint_mpc_wrapper = KeypointMPCWrapper(robot_model, time_horizon=time_horizon-1, n_keypt_dim=n_keypt_dim)
-    action_optimizer = torch.optim.SGD(keypoint_mpc_wrapper.parameters(), lr=0.001)
 
     irl_cost_tr = []
     irl_cost_eval = []
 
-    # unroll and extract expected features
-    pred_traj = keypoint_mpc_wrapper.roll_out(start_pose.clone())
+    learnable_cost_opt = torch.optim.Adam(learnable_cost.parameters(), lr=1e-2)
+
+    irl_loss_dems = []
+    # initial loss before training
+    for demo_i in range(len(train_trajs)):
+        expert_demo_dict = train_trajs[demo_i]
+
+        start_pose = expert_demo_dict['start_joint_config'].squeeze()
+        expert_demo = expert_demo_dict['desired_keypoints'].reshape(traj_len, -1)
+        expert_demo = torch.Tensor(expert_demo)
+        time_horizon, n_keypt_dim = expert_demo.shape
+
+        keypoint_mpc_wrapper = KeypointMPCWrapper(robot_model, time_horizon=time_horizon - 1, n_keypt_dim=n_keypt_dim)
+        # unroll and extract expected features
+        pred_traj = keypoint_mpc_wrapper.roll_out(start_pose.clone())
+
+        # get initial irl loss
+        irl_loss = irl_loss_fn(pred_traj, expert_demo).mean()
+        irl_loss_dems.append(irl_loss.item())
+
+    irl_cost_tr.append(torch.Tensor(irl_loss_dems).mean())
+    print("irl cost training iter: {} loss: {}".format(0, irl_loss))
 
     print("Cost function parameters to be optimized:")
     for name, param in learnable_cost.named_parameters():
         print(name)
         print(param)
 
-    # get initial irl loss
-    irl_loss = irl_loss_fn(pred_traj, expert_demo).mean()
-    irl_cost_tr.append(irl_loss)
-    print("irl cost training iter: {} loss: {}".format(0, irl_loss.item()))
-
     # start of inverse RL loop
     for outer_i in range(n_outer_iter):
+        irl_loss_dems = []
 
-        learnable_cost_opt.zero_grad()
-        # re-initialize action parameters for each outer iteration
+        for demo_i in range(len(train_trajs)):
+            learnable_cost_opt.zero_grad()
+            expert_demo_dict = train_trajs[demo_i]
 
-        for _ in range(n_inner_iter):
-            action_optimizer.zero_grad()
-            keypoint_mpc_wrapper.reset_actions()
+            start_pose = expert_demo_dict['start_joint_config'].squeeze()
+            expert_demo = expert_demo_dict['desired_keypoints'].reshape(traj_len, -1)
+            expert_demo = torch.Tensor(expert_demo)
+            time_horizon, n_keypt_dim = expert_demo.shape
+
+            keypoint_mpc_wrapper = KeypointMPCWrapper(robot_model, time_horizon=time_horizon - 1, n_keypt_dim=n_keypt_dim)
+            action_optimizer = torch.optim.SGD(keypoint_mpc_wrapper.parameters(), lr=0.001)
 
             with higher.innerloop_ctx(keypoint_mpc_wrapper, action_optimizer) as (fpolicy, diffopt):
                 pred_traj = fpolicy.roll_out(start_pose.clone())
@@ -107,24 +123,25 @@ def irl_training(learnable_cost, robot_model, irl_loss_fn, expert_demo, start_po
                 pred_traj = fpolicy.roll_out(start_pose)
                 # compute task loss
                 irl_loss = irl_loss_fn(pred_traj, expert_demo).mean()
-
-                print("irl cost training iter: {} loss: {}".format(outer_i+1, irl_loss.item()))
-
                 # backprop gradient of learned cost parameters wrt irl loss
                 irl_loss.backward(retain_graph=True)
-                irl_cost_tr.append(irl_loss.detach())
+                irl_loss_dems.append(irl_loss.detach())
 
-        learnable_cost_opt.step()
+            learnable_cost_opt.step()
 
-        if outer_i % 250 == 0:
-            plt.figure()
-            plt.plot(pred_traj[:, 7].detach(), pred_traj[:, 9].detach(), 'o')
-            plt.plot(expert_demo[:, 0], expert_demo[:, 2], 'x')
-            plt.title("outer i: {}".format(outer_i))
-            plt.show()
+            if outer_i % 25 == 0:
+                plt.figure()
+                plt.plot(pred_traj[:, 7].detach(), pred_traj[:, 9].detach(), 'o')
+                plt.plot(expert_demo[:, 0], expert_demo[:, 2], 'x')
+                plt.title("outer i: {}".format(outer_i))
+                plt.show()
 
+        irl_cost_tr.append(torch.Tensor(irl_loss_dems).mean())
         eval_costs = evaluate_action_optimization(learnable_cost.eval(), robot_model, irl_loss_fn, test_trajs,
                                                   n_inner_iter)
+        print("irl cost training iter: {} loss: {}".format(outer_i + 1, irl_cost_tr[-1]))
+        print("eval cost training iter: {} loss: {}".format(outer_i + 1, eval_costs.mean().item()))
+        print("")
         irl_cost_eval.append(eval_costs)
         learnable_cost_params = {}
         for name, param in learnable_cost.named_parameters():
@@ -134,6 +151,12 @@ def irl_training(learnable_cost, robot_model, irl_loss_fn, expert_demo, start_po
             # For RBF Weighted Cost
             for name, param in learnable_cost.weights_fn.named_parameters():
                 learnable_cost_params[name] = param
+
+    plt.figure()
+    plt.plot(pred_traj[:, 7].detach(), pred_traj[:, 9].detach(), 'o')
+    plt.plot(expert_demo[:, 0], expert_demo[:, 2], 'x')
+    plt.title("final")
+    plt.show()
 
     return torch.stack(irl_cost_tr), torch.stack(irl_cost_eval), learnable_cost_params, pred_traj
 
@@ -165,8 +188,8 @@ if __name__ == '__main__':
     time_horizon = expert_demo.shape[0]
 
     # type of cost
-    # cost_type = 'Weighted'
-    # cost_type = 'TimeDep'
+    #cost_type = 'Weighted'
+    #cost_type = 'TimeDep'
     cost_type = 'RBF'
 
     learnable_cost = None
@@ -182,15 +205,14 @@ if __name__ == '__main__':
 
     irl_loss_fn = IRLLoss()
 
-    n_outer_iter = 1000
+    n_outer_iter = 100
     n_inner_iter = 1
     n_test_traj = 2
-    train_trajs = trajs[0:1]
-    test_trajs = trajs[1:1+n_test_traj]
+    train_trajs = trajs[0:3]
+    test_trajs = trajs[3:3+n_test_traj]
     irl_cost_tr, irl_cost_eval, learnable_cost_params, pred_traj = irl_training(learnable_cost, robot_model, irl_loss_fn,
-                                                                     expert_demo, start_q, test_trajs,
+                                                                     train_trajs, test_trajs,
                                                                      n_outer_iter, n_inner_iter)
-
 
     if not os.path.exists(model_data_dir):
         os.makedirs(model_data_dir)

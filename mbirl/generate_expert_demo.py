@@ -43,34 +43,6 @@ class GroundTruthForwardModel(torch.nn.Module):
         return torch.stack(keypoints).squeeze()
 
 
-class ActionNetwork(torch.nn.Module):
-    def __init__(self, model):
-        super().__init__()
-        self.action = torch.nn.Parameter(torch.Tensor(np.zeros([10, 7])))
-        # torch.nn.Module.register_paramete(self.action)
-        self.model = model
-        self.optimizer = torch.optim.SGD(self.parameters(), lr=1e-1)
-        self.mse_loss = torch.nn.MSELoss()
-
-    def forward(self, joint_state, ac):
-        ee_pred = self.model(joint_state, ac)
-        return ee_pred
-
-    def roll_out(self, joint_state):
-        qs = []
-        key_pos = []
-        qs.append(joint_state)
-        key_pos.append(self.model.forward_kin(joint_state))
-        for t in range(10):
-            ac = self.action[t]
-            ee_pred = self.forward(joint_state.detach(), ac)
-            joint_state = (joint_state.detach() + ac).clone()
-            qs.append(joint_state.clone())
-            key_pos.append(ee_pred.clone())
-
-        return torch.stack(qs), torch.stack(key_pos)
-
-
 def visualize_traj(traj_data, robot_id, sim):
     qs = traj_data['q'].squeeze()
     print(qs.shape)
@@ -129,16 +101,9 @@ if __name__ == '__main__':
     robot_model = DifferentiableRobotModel(urdf_path=urdf_path, name="kuka_w_obj_keypts")
 
     dmodel = GroundTruthForwardModel(robot_model)
-    policy = ActionNetwork(dmodel)
 
     rest_pose = [0.0, 0.0, 0.0, 1.57079633, 0.0, 1.03672558, 0.0]
     rest_pose = torch.Tensor(rest_pose).unsqueeze(dim=0)
-
-    # update kinematic state
-    _ = dmodel.forward_kin(rest_pose)
-
-    start_keypts = dmodel.forward_kin(rest_pose)
-    print(f"cur keypts: {start_keypts}")
 
     data_type = 'placing'
     # data_type = 'reaching'
@@ -148,15 +113,22 @@ if __name__ == '__main__':
     if not os.path.exists(traj_data_dir):
         os.makedirs(traj_data_dir)
 
+    joint_limits = [2.967, 2.094, 2.967, 2.094, 2.967, 2.094, 3.054]
     if regenerate_data or not os.path.exists(f'{traj_data_dir}/traj_data_{data_type}.pkl'):
         trajectories = []
         for traj_it in range(6):
             print(traj_it)
             traj_data = {}
+            start_pose = rest_pose.clone()
+            # start_pose[0, 3] += torch.randn(1)[0]*0.03
+            # if torch.abs(start_pose[0, 3]) > joint_limits[3]:
+            #     start_pose[0, 3] = torch.Tensor(joint_limits[3])
+            start_keypts = dmodel.forward_kin(start_pose)
+            print(f"cur keypts: {start_keypts}")
             goal_keypts1 = start_keypts[-3:].clone()
-            goal_keypts1[:, 0] = goal_keypts1[:, 0] + torch.Tensor(np.random.uniform(-0.25, -0.15, 1)*100.0)
+            goal_keypts1[:, 0] = goal_keypts1[:, 0] + torch.Tensor([-20.0]) + torch.randn(1)[0]#torch.Tensor(np.random.uniform(-0.25, -0.15, 1)*100.0)
             goal_keypts2 = goal_keypts1.clone()
-            goal_keypts2[:, 2] = goal_keypts2[:, 2] + torch.Tensor(np.random.uniform(-0.3, -0.2, 1)*100.0)
+            goal_keypts2[:, 2] = goal_keypts2[:, 2] + torch.Tensor([-30.0]) + torch.randn(1)[0]#torch.Tensor(np.random.uniform(-0.3, -0.2, 1)*100.0)
 
             if data_type == 'reaching':
                 goal_ee_list = torch.stack([start_keypts.clone() for i in range(10)])
@@ -170,7 +142,7 @@ if __name__ == '__main__':
                     goal_ee_list[:5, kp_idx, 0] = torch.linspace(start_keypts[kp_idx, 0], goal_keypts1[kp_idx, 0], 5)
                     goal_ee_list[5:, kp_idx, 2] = torch.linspace(goal_keypts1[kp_idx, 2], goal_keypts2[kp_idx, 2], 5)
 
-            traj_data['start_joint_config'] = rest_pose
+            traj_data['start_joint_config'] = start_pose
             traj_data['desired_keypoints'] = goal_ee_list
             trajectories.append(traj_data)
 

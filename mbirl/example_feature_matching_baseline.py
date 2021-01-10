@@ -22,7 +22,6 @@ class QPoptimizer(object):
     def __call__(self, feature_num, learner, expert):
         w = cp.Variable(feature_num)
         obj_func = cp.Minimize(cp.norm(w))
-        # ToDO; why is this constraint >= 1.0, the code from the link above has a different constraint?
         constraints = [(expert.detach().numpy() - learner.detach().numpy()) @ w >= 1]
 
         prob = cp.Problem(obj_func, constraints)
@@ -105,7 +104,7 @@ def irl_training(robot_model, irl_loss_fn, expert_demo, start_joint_state, test_
     cost_optimizer = QPoptimizer()
     time_horizon, n_keypt_dim = expert_demo.shape
     keypoint_mpc_wrapper = KeypointMPCWrapper(robot_model, time_horizon=time_horizon - 1, n_keypt_dim=n_keypt_dim)
-    action_optimizer = torch.optim.SGD(keypoint_mpc_wrapper.parameters(), lr=0.001)
+    action_optimizer = torch.optim.SGD(keypoint_mpc_wrapper.parameters(), lr=1.0)
 
     goal_keypts = expert_demo[-1, -n_keypt_dim:].clone()
 
@@ -151,7 +150,7 @@ def irl_training(robot_model, irl_loss_fn, expert_demo, start_joint_state, test_
 
         # check convergence
         hyper_distance = np.abs(np.dot(W, expert_features.detach() - phi.detach()))  # hyperdistance = t
-        if hyper_distance <= params['epsilon']:  # terminate if the point reached close enough
+        if hyper_distance <= 0.001:  # terminate if the point reached close enough
             break
 
         eval_costs = evaluate_action_optimization(torch.Tensor(W), robot_model, irl_loss_fn, test_trajs,
@@ -173,12 +172,12 @@ if __name__ == '__main__':
     urdf_path = os.path.join(mbirl.__path__[0], rel_urdf_path)
     robot_model = DifferentiableRobotModel(urdf_path=urdf_path, name="kuka_w_obj_keypts")
 
-    params = {
-        'gamma': 0.9,
-        'epsilon': 0.001,
-        'n_inner_iter': 1,
-        'time_horizon': 25
-    }
+    # params = {
+    #     'gamma': 0.9,
+    #     'epsilon': 0.001,
+    #     'n_inner_iter': 1,
+    #     'time_horizon': 25
+    # }
 
     # data_type = 'reaching'
     data_type = 'placing'
@@ -199,8 +198,8 @@ if __name__ == '__main__':
     # compare progress to our algorithm
     irl_loss_fn = IRLLoss()
 
-    n_outer_iter = 1000  # 200
-    n_inner_iter = 10
+    n_outer_iter = 200
+    n_inner_iter = 5
     time_horizon = 10
     n_test_traj = 5
     irl_cost_tr, irl_cost_eval, learnable_cost_params, pred_traj = irl_training(robot_model, irl_loss_fn, expert_demo,

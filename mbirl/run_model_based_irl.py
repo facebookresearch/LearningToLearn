@@ -72,7 +72,7 @@ def irl_training(learnable_cost, robot_model, irl_loss_fn, train_trajs, test_tra
     irl_loss_dems = []
     # initial loss before training
 
-    vid_dir = os.path.join(traj_data_dir, data_type, cost_type)
+    vid_dir = os.path.join(model_data_dir, data_type, cost_type)
 
     if not os.path.exists(vid_dir):
         os.makedirs(vid_dir)

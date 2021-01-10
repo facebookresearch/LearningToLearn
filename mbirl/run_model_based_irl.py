@@ -17,7 +17,6 @@ sys.path.append(_ROOT_DIR)
 from mbirl.learnable_costs import LearnableWeightedCost, LearnableTimeDepWeightedCost, LearnableRBFWeightedCost
 from mbirl.keypoint_mpc import KeypointMPCWrapper
 
-
 traj_data_dir = os.path.join(_ROOT_DIR, 'traj_data')
 model_data_dir = os.path.join(_ROOT_DIR, 'model_data')
 
@@ -30,7 +29,7 @@ class IRLLoss(object):
         return loss.mean()
 
 
-def evaluate_action_optimization(learned_cost, robot_model, irl_loss_fn, trajs, n_inner_iter):
+def evaluate_action_optimization(learned_cost, robot_model, irl_loss_fn, trajs, n_inner_iter, action_lr=0.001):
     # np.random.seed(cfg.random_seed)
     # torch.manual_seed(cfg.random_seed)
 
@@ -43,8 +42,8 @@ def evaluate_action_optimization(learned_cost, robot_model, irl_loss_fn, trajs, 
         expert_demo = torch.Tensor(expert_demo)
         time_horizon, n_keypt_dim = expert_demo.shape
 
-        keypoint_mpc_wrapper = KeypointMPCWrapper(robot_model, time_horizon=time_horizon-1, n_keypt_dim=n_keypt_dim)
-        action_optimizer = torch.optim.SGD(keypoint_mpc_wrapper.parameters(), lr=0.001)
+        keypoint_mpc_wrapper = KeypointMPCWrapper(robot_model, time_horizon=time_horizon - 1, n_keypt_dim=n_keypt_dim)
+        action_optimizer = torch.optim.SGD(keypoint_mpc_wrapper.parameters(), lr=action_lr)
 
         for i in range(n_inner_iter):
             action_optimizer.zero_grad()
@@ -63,16 +62,21 @@ def evaluate_action_optimization(learned_cost, robot_model, irl_loss_fn, trajs, 
 
 
 # Helper function for the irl learning loop
-def irl_training(learnable_cost, robot_model, irl_loss_fn, train_trajs, test_trajs, n_outer_iter, n_inner_iter):
-
-
+def irl_training(learnable_cost, robot_model, irl_loss_fn, train_trajs, test_trajs, n_outer_iter, n_inner_iter,
+                 data_type, cost_type, cost_lr=1e-2, action_lr=1e-3):
     irl_cost_tr = []
     irl_cost_eval = []
 
-    learnable_cost_opt = torch.optim.Adam(learnable_cost.parameters(), lr=1e-2)
+    learnable_cost_opt = torch.optim.Adam(learnable_cost.parameters(), lr=cost_lr)
 
     irl_loss_dems = []
     # initial loss before training
+
+    vid_dir = os.path.join(traj_data_dir, data_type, cost_type)
+
+    if not os.path.exists(vid_dir):
+        os.makedirs(vid_dir)
+
     for demo_i in range(len(train_trajs)):
         expert_demo_dict = train_trajs[demo_i]
 
@@ -110,8 +114,9 @@ def irl_training(learnable_cost, robot_model, irl_loss_fn, train_trajs, test_tra
             expert_demo = torch.Tensor(expert_demo)
             time_horizon, n_keypt_dim = expert_demo.shape
 
-            keypoint_mpc_wrapper = KeypointMPCWrapper(robot_model, time_horizon=time_horizon - 1, n_keypt_dim=n_keypt_dim)
-            action_optimizer = torch.optim.SGD(keypoint_mpc_wrapper.parameters(), lr=0.001)
+            keypoint_mpc_wrapper = KeypointMPCWrapper(robot_model, time_horizon=time_horizon - 1,
+                                                      n_keypt_dim=n_keypt_dim)
+            action_optimizer = torch.optim.SGD(keypoint_mpc_wrapper.parameters(), lr=action_lr)
 
             with higher.innerloop_ctx(keypoint_mpc_wrapper, action_optimizer) as (fpolicy, diffopt):
                 pred_traj = fpolicy.roll_out(start_pose.clone())
@@ -134,7 +139,7 @@ def irl_training(learnable_cost, robot_model, irl_loss_fn, train_trajs, test_tra
                 plt.plot(pred_traj[:, 7].detach(), pred_traj[:, 9].detach(), 'o')
                 plt.plot(expert_demo[:, 0], expert_demo[:, 2], 'x')
                 plt.title("outer i: {}".format(outer_i))
-                plt.show()
+                plt.savefig(os.path.join(vid_dir, f'{demo_i}_{outer_i}.png'))
 
         irl_cost_tr.append(torch.Tensor(irl_loss_dems).mean())
         eval_costs = evaluate_action_optimization(learnable_cost.eval(), robot_model, irl_loss_fn, test_trajs,
@@ -156,7 +161,7 @@ def irl_training(learnable_cost, robot_model, irl_loss_fn, train_trajs, test_tra
     plt.plot(pred_traj[:, 7].detach(), pred_traj[:, 9].detach(), 'o')
     plt.plot(expert_demo[:, 0], expert_demo[:, 2], 'x')
     plt.title("final")
-    plt.show()
+    plt.savefig(os.path.join(vid_dir, f'{demo_i}_final.png'))
 
     return torch.stack(irl_cost_tr), torch.stack(irl_cost_eval), learnable_cost_params, pred_traj
 
@@ -172,8 +177,8 @@ if __name__ == '__main__':
     urdf_path = os.path.join(mbirl.__path__[0], rel_urdf_path)
     robot_model = DifferentiableRobotModel(urdf_path=urdf_path, name="kuka_w_obj_keypts")
 
-    data_type = 'reaching'
-    # data_type = 'placing'
+    # data_type = 'reaching'
+    data_type = 'placing'
     with open(f'{traj_data_dir}/traj_data_{data_type}.pkl', 'rb') as f:
         trajs = pickle.load(f)
 
@@ -205,14 +210,21 @@ if __name__ == '__main__':
 
     irl_loss_fn = IRLLoss()
 
+    cost_lr = 1e-2
+    action_lr = 1e-3
     n_outer_iter = 100
     n_inner_iter = 1
     n_test_traj = 2
     train_trajs = trajs[0:3]
-    test_trajs = trajs[3:3+n_test_traj]
-    irl_cost_tr, irl_cost_eval, learnable_cost_params, pred_traj = irl_training(learnable_cost, robot_model, irl_loss_fn,
-                                                                     train_trajs, test_trajs,
-                                                                     n_outer_iter, n_inner_iter)
+    test_trajs = trajs[3:3 + n_test_traj]
+    irl_cost_tr, irl_cost_eval, learnable_cost_params, pred_traj = irl_training(learnable_cost, robot_model,
+                                                                                irl_loss_fn,
+                                                                                train_trajs, test_trajs,
+                                                                                n_outer_iter, n_inner_iter,
+                                                                                cost_type=cost_type,
+                                                                                data_type=data_type,
+                                                                                cost_lr=cost_lr,
+                                                                                action_lr=action_lr)
 
     if not os.path.exists(model_data_dir):
         os.makedirs(model_data_dir)
@@ -221,5 +233,7 @@ if __name__ == '__main__':
         'irl_cost_tr': irl_cost_tr,
         'irl_cost_eval': irl_cost_eval,
         'cost_parameters': learnable_cost_params,
-        'fina_pred_traj': pred_traj
+        'fina_pred_traj': pred_traj,
+        'n_inner_iter': n_inner_iter,
+        'action_lr': action_lr
     }, f=f'{model_data_dir}/{data_type}_{cost_type}')

@@ -82,8 +82,8 @@ for data_type in ['placing', 'reaching']:
     plt.ylabel("IRL Cost")
     plt.legend()
 
-    plt.show()
     plt.savefig(f"{model_data_dir}/{data_type}_IRL_cost.png")
+    plt.show()
 
     # Eval
 
@@ -112,8 +112,8 @@ for data_type in ['placing', 'reaching']:
     plt.ylabel("Eval Cost")
     plt.legend()
 
-    plt.show()
     plt.savefig(f"{model_data_dir}/{data_type}_Eval.png")
+    plt.show()
 
     # Get Demo Trajectories
 
@@ -164,8 +164,8 @@ for data_type in ['placing', 'reaching']:
     plt.ylabel("Y")
     plt.legend()
 
-    plt.show()
     plt.savefig(f"{model_data_dir}/{data_type}_pred_train_traj.png")
+    plt.show()
 
     # Plot trajectories with 1 eval trajectory
 
@@ -242,6 +242,7 @@ for data_type in ['placing', 'reaching']:
         ax.set_ylabel("y")
         ax.set_zlabel("z")
         ax.legend()
+    plt.savefig(f"{model_data_dir}/{data_type}_pred_eval_traj_3d.png")
     plt.show()
 
     fig = plt.figure(figsize=(n_test_traj * 5, 5))
@@ -265,4 +266,5 @@ for data_type in ['placing', 'reaching']:
         ax.set_ylabel("y")
         # ax.set_zlabel("z")
         ax.legend()
+    plt.savefig(f"{model_data_dir}/{data_type}_pred_eval_traj_2d.png")
     plt.show()

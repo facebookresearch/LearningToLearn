@@ -172,8 +172,8 @@ if __name__ == '__main__':
     urdf_path = os.path.join(mbirl.__path__[0], rel_urdf_path)
     robot_model = DifferentiableRobotModel(urdf_path=urdf_path, name="kuka_w_obj_keypts")
 
-    # data_type = 'reaching'
-    data_type = 'placing'
+    data_type = 'reaching'
+    # data_type = 'placing'
     with open(f'{traj_data_dir}/traj_data_{data_type}.pkl', 'rb') as f:
         trajs = pickle.load(f)
 
@@ -188,8 +188,8 @@ if __name__ == '__main__':
     time_horizon = expert_demo.shape[0]
 
     # type of cost
-    #cost_type = 'Weighted'
-    #cost_type = 'TimeDep'
+    # cost_type = 'Weighted'
+    # cost_type = 'TimeDep'
     cost_type = 'RBF'
 
     learnable_cost = None

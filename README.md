@@ -81,7 +81,7 @@ urdf_parser_py
 
 #### Run Our Method
 1. ```python mbirl/example_irl_cost_learning_our_method.py```
-2. Check the trajectories predicted during training in model_data/<data_type>/<cost_type>
+2. Check the trajectories predicted during training in model_data/placing/<cost_type>
 
 #### Plot the losses, evaluate our method
 1. ```jupyter notebook```

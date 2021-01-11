@@ -1,4 +1,8 @@
+import os
+import ml3
 from ml3.sine_regression_task import main as meta_train
+
+EXP_FOLDER = os.path.join(ml3.__path__[0], "experiments/data/sine_exp")
 
 
 if __name__ == "__main__":
@@ -21,7 +25,7 @@ if __name__ == "__main__":
 
     model_arch_str = str(exp_cfg['model']['hidden_dim'])
     meta_arch_str = "{}".format(exp_cfg['metaloss']['hidden_dim'])
-    exp_cfg['log_dir'] = "sin_exp"
+    exp_cfg['log_dir'] = f"{EXP_FOLDER}"
 
 
     for seed in range(5):

@@ -64,8 +64,8 @@ def evaluate_action_optimization(learned_cost, robot_model, irl_loss_fn, trajs, 
 # Helper function for the irl learning loop
 def irl_training(learnable_cost, robot_model, irl_loss_fn, train_trajs, test_trajs, n_outer_iter, n_inner_iter,
                  data_type, cost_type, cost_lr=1e-2, action_lr=1e-3):
-    irl_cost_tr = []
-    irl_cost_eval = []
+    irl_loss_on_train = []
+    irl_loss_on_test = []
 
     learnable_cost_opt = torch.optim.Adam(learnable_cost.parameters(), lr=cost_lr)
 
@@ -93,8 +93,8 @@ def irl_training(learnable_cost, robot_model, irl_loss_fn, train_trajs, test_tra
         irl_loss = irl_loss_fn(pred_traj, expert_demo).mean()
         irl_loss_dems.append(irl_loss.item())
 
-    irl_cost_tr.append(torch.Tensor(irl_loss_dems).mean())
-    print("irl cost training iter: {} loss: {}".format(0, irl_loss))
+    irl_loss_on_train.append(torch.Tensor(irl_loss_dems).mean())
+    print("irl cost training iter: {} loss: {}".format(0, irl_loss_on_train[-1]))
 
     print("Cost function parameters to be optimized:")
     for name, param in learnable_cost.named_parameters():
@@ -141,13 +141,13 @@ def irl_training(learnable_cost, robot_model, irl_loss_fn, train_trajs, test_tra
                 plt.title("outer i: {}".format(outer_i))
                 plt.savefig(os.path.join(vid_dir, f'{demo_i}_{outer_i}.png'))
 
-        irl_cost_tr.append(torch.Tensor(irl_loss_dems).mean())
-        eval_costs = evaluate_action_optimization(learnable_cost.eval(), robot_model, irl_loss_fn, test_trajs,
+        irl_loss_on_train.append(torch.Tensor(irl_loss_dems).mean())
+        test_irl_losses = evaluate_action_optimization(learnable_cost.eval(), robot_model, irl_loss_fn, test_trajs,
                                                   n_inner_iter)
-        print("irl cost training iter: {} loss: {}".format(outer_i + 1, irl_cost_tr[-1]))
-        print("eval cost training iter: {} loss: {}".format(outer_i + 1, eval_costs.mean().item()))
+        print("irl loss (on train) training iter: {} loss: {}".format(outer_i + 1, irl_loss_on_train[-1]))
+        print("irl loss (on test) training iter: {} loss: {}".format(outer_i + 1, test_irl_losses.mean().item()))
         print("")
-        irl_cost_eval.append(eval_costs)
+        irl_loss_on_test.append(test_irl_losses)
         learnable_cost_params = {}
         for name, param in learnable_cost.named_parameters():
             learnable_cost_params[name] = param
@@ -163,7 +163,7 @@ def irl_training(learnable_cost, robot_model, irl_loss_fn, train_trajs, test_tra
     plt.title("final")
     plt.savefig(os.path.join(vid_dir, f'{demo_i}_final.png'))
 
-    return torch.stack(irl_cost_tr), torch.stack(irl_cost_eval), learnable_cost_params, pred_traj
+    return torch.stack(irl_loss_on_train), torch.stack(irl_loss_on_test), learnable_cost_params, pred_traj
 
 
 if __name__ == '__main__':
@@ -177,7 +177,6 @@ if __name__ == '__main__':
     urdf_path = os.path.join(mbirl.__path__[0], rel_urdf_path)
     robot_model = DifferentiableRobotModel(urdf_path=urdf_path, name="kuka_w_obj_keypts")
 
-    # data_type = 'reaching'
     data_type = 'placing'
     with open(f'{traj_data_dir}/traj_data_{data_type}.pkl', 'rb') as f:
         trajs = pickle.load(f)
@@ -193,9 +192,9 @@ if __name__ == '__main__':
     time_horizon = expert_demo.shape[0]
 
     # type of cost
-    # cost_type = 'Weighted'
-    # cost_type = 'TimeDep'
-    cost_type = 'RBF'
+    cost_type = 'Weighted'
+    #cost_type = 'TimeDep'
+    #cost_type = 'RBF'
 
     learnable_cost = None
 
@@ -217,21 +216,21 @@ if __name__ == '__main__':
     n_test_traj = 2
     train_trajs = trajs[0:3]
     test_trajs = trajs[3:3 + n_test_traj]
-    irl_cost_tr, irl_cost_eval, learnable_cost_params, pred_traj = irl_training(learnable_cost, robot_model,
-                                                                                irl_loss_fn,
-                                                                                train_trajs, test_trajs,
-                                                                                n_outer_iter, n_inner_iter,
-                                                                                cost_type=cost_type,
-                                                                                data_type=data_type,
-                                                                                cost_lr=cost_lr,
-                                                                                action_lr=action_lr)
+    irl_loss_train, irl_loss_test, learnable_cost_params, pred_traj = irl_training(learnable_cost, robot_model,
+                                                                                   irl_loss_fn,
+                                                                                   train_trajs, test_trajs,
+                                                                                   n_outer_iter, n_inner_iter,
+                                                                                   cost_type=cost_type,
+                                                                                   data_type=data_type,
+                                                                                   cost_lr=cost_lr,
+                                                                                   action_lr=action_lr)
 
     if not os.path.exists(model_data_dir):
         os.makedirs(model_data_dir)
 
     torch.save({
-        'irl_cost_tr': irl_cost_tr,
-        'irl_cost_eval': irl_cost_eval,
+        'irl_loss_train': irl_loss_train,
+        'irl_loss_test': irl_loss_test,
         'cost_parameters': learnable_cost_params,
         'fina_pred_traj': pred_traj,
         'n_inner_iter': n_inner_iter,

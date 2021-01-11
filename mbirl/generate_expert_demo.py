@@ -1,3 +1,4 @@
+# Copyright (c) Facebook, Inc. and its affiliates.
 import os, sys
 import random
 import torch
@@ -77,7 +78,7 @@ if __name__ == '__main__':
             goal_keypts2 = goal_keypts1.clone()
             goal_keypts2[:, 2] = goal_keypts2[:, 2] + torch.Tensor([-30.0]) + torch.randn(1)[0]
 
-            desired_keypt_traj = torch.stack([start_keypts.clone() for i in range(10)])
+            desired_keypt_traj = torch.stack([start_keypts.clone() for i in range(5)] + [goal_keypts1.clone() for i in range(5)])
 
             for kp_idx in range(2):
                 desired_keypt_traj[:5, kp_idx, 0] = torch.linspace(start_keypts[kp_idx, 0], goal_keypts1[kp_idx, 0], 5)

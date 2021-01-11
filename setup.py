@@ -5,7 +5,7 @@
 #######################################################################
 from setuptools import setup, find_packages
 
-install_requires = ["numpy", "higher", "matplotlib", "termcolor", "pybullet"]
+install_requires = ["numpy", "higher", "matplotlib", "termcolor", "pybullet", "differentiable_robot_model", "dill", "cvxpy", "jupyter"]
 
 setup(
     name="ml3",
@@ -17,3 +17,5 @@ setup(
     include_package_data=True,
     zip_safe=False,
 )
+
+

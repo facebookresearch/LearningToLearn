@@ -63,6 +63,41 @@ booktitle = {International Conference on Pattern Recognition, {ICPR}, Italy, Jan
 year      = {2021} }
 ```
 
+## MBIRL - Model Based Inverse Reinforcement Learning
+
+### Simulation
+#### Dependencies:
+```python 3.6
+pytorch
+math
+numpy
+higher
+cvxpy
+urdf_parser_py
+```
+#### Generate Data
+1. ```python mbirl/generate_expert_demo_interpolate.py``` 
+2. Check the data and visualizations of the demonstration in 'mbirl/traj_data'
+
+#### Run Our Method
+1. ```python mbirl/example_irl_cost_learning_our_method.py```
+2. Check the trajectories predicted during training in model_data/placing/<cost_type>
+
+#### Plot the losses, evaluate our method
+1. ```jupyter notebook```
+2. Access the notebook in the browser in 'mbirl/plot_mbirl_training_and_eval.ipynb'
+
+#### Citation
+```
+@InProceedings{mbirl,
+  author    = {Neha Das, Sarah Bechtle, Todor Davchev, Dinesh Jayaraman, Akshara Rai and Franziska Meier},
+  booktitle = {Conference on Robot Learning (CoRL)},
+  title     = {Model Based Inverse Reinforcement Learning from Visual Demonstration},
+  year      = {2020},
+  video     = {https://www.youtube.com/watch?v=sRrNhtLk12M&t=52s},
+}
+```
+
 ## License
 
 `LearningToLearn` is released under the MIT license. See [LICENSE](LICENSE) for additional details about it.

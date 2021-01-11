@@ -76,14 +76,12 @@ cvxpy
 urdf_parser_py
 ```
 #### Generate Data
-1. Choose type of data 'reaching' or 'placing' by changing the variable 'data_type' in the script 'mbirl/generate_expert_demo_interpolate.py'
-2. ```python mbirl/generate_expert_demo_interpolate.py``` 
-3. Check the data and visualizations of the demonstration in 'mbirl/traj_data'
+1. ```python mbirl/generate_expert_demo_interpolate.py``` 
+2. Check the data and visualizations of the demonstration in 'mbirl/traj_data'
 
 #### Run Our Method
-1. Choose type of data 'reaching' or 'placing' by changing the variable 'data_type' in the script 'mbirl/example_irl_cost_learning_our_method.py'
-2. ```python mbirl/example_irl_cost_learning_our_method.py```
-3. Check the trajectories predicted during training in model_data/<data_type>/<cost_type>
+1. ```python mbirl/example_irl_cost_learning_our_method.py```
+2. Check the trajectories predicted during training in model_data/<data_type>/<cost_type>
 
 #### Plot the losses, evaluate our method
 1. ```jupyter notebook```

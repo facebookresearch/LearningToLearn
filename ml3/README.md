@@ -4,37 +4,46 @@
 To reproduce results of the ML3 paper follow the instructions.
 All loss models are stored in 'experiments/data, all plots are stored in ./plots
 
-#### Loss Learning for Regression
-COMING SOON
+#### Loss Learning for Regression (ML3 paper experiment section 4.1.1)
+For meta learning the loss run
+
+```
+python experiments/run_sine_regression_exp.py
+```
+
+For visualizing the results run `jupyter notebook` and open `ml3_sine_regression_exp_viz`
 
 #### Reward Learning for Model-based RL (MBRL) Reacher
 For meta learning the loss run
 
 ```
-python experiments/mbrl_reacher.py train
+python experiments/run_mbrl_reacher_exp.py train
 ```
 
 For testing the loss run
 
 ```
-python experiments/mbrl_reacher.py test
+python experiments/run_mbrl_reacher_exp.py test
 ```
-
 
 #### Learning with extra information at meta-train time
-##### For meta learning the loss with or without extra information on sine function run:
+The following scripts require two arguments, first one is `train\test`, the 2nd one 
+indicates whether to use extra information by setting `True\False` (with\without extra info)
+##### For meta learning the loss with extra information on sine function run:
 ```
-python experiments/shaped_sine.py train True
+python experiments/run_shaped_sine_exp.py train True
 ```
-To test the loss with or without extra information run:
+To test the loss with extra information run:
 ```
-python experiments/shaped_sine.py test True
+python experiments/run_shaped_sine_exp.py test True
 ```
-##### For meta learning the loss with or without additional goal in the mountain car experiment run:
+The test script generates a gif of the final policy, and stores it in the experiment folder 
+##### For meta learning the loss with additional goal in the mountain car experiment run:
 ```
-python experiments/mountain_car.py train True
+python experiments/run_mountain_car_exp.py train True
 ```
-To test the loss with or without extra goal run:
+To test the loss with extra goal run:
 ```
-python experiments/mountain_car.py True
+python experiments/run_mountain_car_exp.py True
 ```
+The test script generates a gif of the final policy, and stores it in the experiment folder 

@@ -42,9 +42,8 @@ if __name__ == '__main__':
     env = MountainCar()
     s_0 = env.reset()
 
-    n_outer_iter = 1000
+    n_outer_iter = 300
     n_inner_iter = 1
-
 
     time_horizon = 35
 

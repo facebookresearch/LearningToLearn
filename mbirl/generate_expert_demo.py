@@ -1,36 +1,21 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
-import os, sys
+import os
 import random
 import torch
 import numpy as np
-import dill as pickle
 import mbirl
 import matplotlib.pyplot as plt
-from os.path import dirname, abspath
 
 from differentiable_robot_model import DifferentiableRobotModel
 
-_ROOT_DIR = dirname(abspath(__file__))
-sys.path.append(_ROOT_DIR)
-
-traj_data_dir = os.path.join(_ROOT_DIR, 'traj_data')
+EXP_FOLDER = os.path.join(mbirl.__path__[0], "experiments")
+traj_data_dir = os.path.join(EXP_FOLDER, 'traj_data')
 
 
 class GroundTruthForwardModel(torch.nn.Module):
     def __init__(self, model):
         super(GroundTruthForwardModel, self).__init__()
         self.robot_model = model
-
-    # x=current joint state, u=change in joint state
-    def forward(self, x, u):
-        xdesired = x + u
-
-        keypoints = []
-        for link in [1, 2]:#, 3]:
-            kp_pos, kp_rot = self.robot_model.compute_forward_kinematics(xdesired, 'kp_link_' + str(link))
-            keypoints += 100.0*kp_pos
-
-        return torch.stack(keypoints).squeeze()
 
     def forward_kin(self, x):
         keypoints = []
@@ -65,7 +50,7 @@ if __name__ == '__main__':
         os.makedirs(traj_data_dir)
 
     joint_limits = [2.967, 2.094, 2.967, 2.094, 2.967, 2.094, 3.054]
-    if regenerate_data or not os.path.exists(f'{traj_data_dir}/traj_data_{experiment_type}.pkl'):
+    if regenerate_data or not os.path.exists(f'{traj_data_dir}/traj_data_{experiment_type}.pt'):
         trajectories = []
         for traj_it in range(6):
             print(traj_it)
@@ -88,13 +73,10 @@ if __name__ == '__main__':
             traj_data['desired_keypoints'] = desired_keypt_traj
             trajectories.append(traj_data)
 
-        with open(f'{traj_data_dir}/traj_data_{experiment_type}.pkl', "wb") as fp:
-            pickle.dump(trajectories, fp, protocol=pickle.HIGHEST_PROTOCOL)
-
+        torch.save(trajectories, f"{traj_data_dir}/traj_data_{experiment_type}.pt")
 
     # visualization - matplotlib
-    with open(f'{traj_data_dir}/traj_data_{experiment_type}.pkl', 'rb') as f:
-        trajs = pickle.load(f)
+    trajs = torch.load(f"{traj_data_dir}/traj_data_{experiment_type}.pt")
 
     n_trajs = len(trajs)
 

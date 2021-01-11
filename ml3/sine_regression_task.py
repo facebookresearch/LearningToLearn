@@ -1,5 +1,4 @@
 
-import dill as pickle
 import os
 
 import numpy as np
@@ -81,13 +80,6 @@ def meta_train(meta_loss_model, meta_optimizer, meta_objective, task_sampler_tra
                     qry_losses.append(task_loss.item())
 
             meta_optimizer.step()
-            # stepping the models forward so that meta optimizer sees different stages
-            # for i in range(num_tasks):
-            #     task_opts[i].zero_grad()
-            #     yp, feat = task_models[i](x_spt[i])
-            #     loss = meta_objective(yp, y_spt[i])
-            #     loss.backward()
-            #     task_opts[i].step()
 
         avg_qry_loss = sum(qry_losses) / num_tasks
         if outer_i % 10 == 0:
@@ -179,13 +171,12 @@ def main(exp_cfg):
                      task_sampler_train=task_sampler_train, task_sampler_test=task_sampler_test,
                      exp_cfg=exp_cfg)
 
-    pkl_file = os.path.join(exp_cfg['log_dir'], exp_cfg['exp_log_file_name'])
+    data_file = os.path.join(exp_cfg['log_dir'], exp_cfg['exp_log_file_name'])
 
-    pkl_dir = os.path.dirname(pkl_file)
-    if pkl_dir is not '' and not os.path.exists(pkl_dir):  # Create directory if it doesn't exist.
-        os.makedirs(pkl_dir)
-    with open(pkl_file, 'wb') as fp:
-        pickle.dump(res, fp, protocol=pickle.HIGHEST_PROTOCOL)
+    data_dir = os.path.dirname(data_file)
+    if data_dir is not '' and not os.path.exists(data_dir):  # Create directory if it doesn't exist.
+        os.makedirs(data_dir)
+    torch.save(res, data_file)
 
 
 if __name__ == "__main__":

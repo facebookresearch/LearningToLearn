@@ -29,10 +29,9 @@ def generate_sinusoid_batch(num_tasks, num_examples_task, num_steps, random_step
     return init_inputs, outputs,thetas
 
 '''PLOTTING THE LOSS LANDSCAPES FOR ILLUSTRATION'''
-def plot_loss(extra, freq=0.5):
+def plot_loss(extra, exp_folder, freq=0.5):
     meta = MetaNetwork()
-    #meta.model.load_state_dict(torch.load('meta_checkpoint_extra_info_' + str(extra) + '.pt'))
-    meta.model.load_state_dict(torch.load('data/ml3_loss_shaped_sine_'+str(extra)+'.pt'))
+    meta.model.load_state_dict(torch.load(f'{exp_folder}/ml3_loss_shaped_sine_'+str(extra)+'.pt'))
     meta.model.eval()
 
     loss_landscape = []

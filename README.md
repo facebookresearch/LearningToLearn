@@ -1,59 +1,20 @@
 # LearningToLearn
+This repository contains code for 
+* ML3: Meta-Learning via Learned Losses ([pdf](https://arxiv.org/pdf/1906.05374.pdf))
+* MBIRL: Model-Based Inverse Reinforcement Learning from Visual Demonstrations ([pdf](https://arxiv.org/pdf/2010.09034.pdf))
 
 ## Setup
 In the LearningToLearn folder, run:
 
 ```
-conda create -n ml3 python=3.7
-conda activate ml3
+conda create -n l2l python=3.7
+conda activate l2l 
 python setup.py develop
 ```
 
-In the LearningToLearn folder, follow the commands to store plots and data:
-
-```
-mkdir plots
-mkdir experiments/data
-```
-
 ## ML3 paper experiments and citation
-To reproduce results of the ML3 paper follow the instructions.
-All loss models are stored in ./data, all plots are stored in ./plots
+To reproduce results of the ML3 paper follow the README instructions in the `ml3` folder
 
-#### Loss Learning for Regression
-COMING SOON
-
-#### Reward Learning for Model-based RL (MBRL) Reacher
-For meta learning the loss run
-
-```
-python experiments/mbrl_reacher.py train
-```
-
-For testing the loss run
-
-```
-python experiments/mbrl_reacher.py test
-```
-
-
-#### Learning with extra information at meta-train time
-##### For meta learning the loss with or without extra information on sine function run:
-```
-python experiments/shaped_sine.py train extra_info=True
-```
-To test the loss with or without extra information run:
-```
-python experiments/shaped_sine.py test extra_info=True
-```
-##### For meta learning the loss with or without additional goal in the mountain car experiment run:
-```
-python experiments/mountain_car.py train extra_info=True
-```
-To test the loss with or without extra goal run:
-```
-python experiments/mountain_car.py test extra_info=True
-```
 #### Citation
 ```
 @inproceedings{ml3,
@@ -63,29 +24,8 @@ booktitle = {International Conference on Pattern Recognition, {ICPR}, Italy, Jan
 year      = {2021} }
 ```
 
-## MBIRL - Model Based Inverse Reinforcement Learning
-
-### Simulation
-#### Dependencies:
-```python 3.6
-pytorch
-math
-numpy
-higher
-cvxpy
-urdf_parser_py
-```
-#### Generate Data
-1. ```python mbirl/generate_expert_demo_interpolate.py``` 
-2. Check the data and visualizations of the demonstration in 'mbirl/traj_data'
-
-#### Run Our Method
-1. ```python mbirl/example_irl_cost_learning_our_method.py```
-2. Check the trajectories predicted during training in model_data/placing/<cost_type>
-
-#### Plot the losses, evaluate our method
-1. ```jupyter notebook```
-2. Access the notebook in the browser in 'mbirl/plot_mbirl_training_and_eval.ipynb'
+## MBIRL paper experiments and citation
+To reproduce results of the MBIRL paper follow the README instructions in the `mbirl` folder
 
 #### Citation
 ```

@@ -27,9 +27,8 @@ if __name__ == "__main__":
     meta_arch_str = "{}".format(exp_cfg['metaloss']['hidden_dim'])
     exp_cfg['log_dir'] = f"{EXP_FOLDER}"
 
-
     for seed in range(5):
         exp_cfg['seed'] = seed
-        exp_file = "sine_regression_seed_{}.pkl".format(exp_cfg['seed'])
+        exp_file = "sine_regression_seed_{}.pt".format(exp_cfg['seed'])
         exp_cfg['exp_log_file_name'] = exp_file
         meta_train(exp_cfg)

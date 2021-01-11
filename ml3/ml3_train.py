@@ -2,8 +2,9 @@
 import torch
 import higher
 import numpy as np
-from ml3.shaped_sine_utils import plot_loss,generate_sinusoid_batch
+from ml3.shaped_sine_utils import plot_loss, generate_sinusoid_batch
 from ml3.optimizee import ShapedSineModel
+
 
 def meta_train_mountain_car(policy,ml3_loss,task_loss_fn,s_0,goal,goal_extra,n_outer_iter,n_inner_iter,time_horizon,shaped_loss):
     s_0 = torch.Tensor(s_0)
@@ -32,7 +33,6 @@ def meta_train_mountain_car(policy,ml3_loss,task_loss_fn,s_0,goal,goal_extra,n_o
             # backprop grad wrt to task loss
             task_loss.backward()
 
-
         meta_opt.step()
 
         if outer_i%100==0:
@@ -40,8 +40,7 @@ def meta_train_mountain_car(policy,ml3_loss,task_loss_fn,s_0,goal,goal_extra,n_o
             print('last state',s[-1])
 
 
-
-def meta_train_reacher(policy,ml3_loss,dmodel,env,task_loss_fn,goals,n_outer_iter,n_inner_iter,time_horizon):
+def meta_train_reacher(policy,ml3_loss,dmodel,env,task_loss_fn,goals,n_outer_iter,n_inner_iter,time_horizon,exp_folder):
     goals = torch.Tensor(goals)
 
     inner_opt = torch.optim.SGD(policy.model.parameters(), lr=policy.learning_rate)
@@ -53,7 +52,7 @@ def meta_train_reacher(policy,ml3_loss,dmodel,env,task_loss_fn,goals,n_outer_ite
         all_loss = 0
         for goal in goals:
             goal = torch.Tensor(goal)
-            policy.model.load_state_dict(torch.load('data/init_policy.pt'))
+            policy.model.load_state_dict(torch.load(f'{exp_folder}/init_policy.pt'))
             policy.model.eval()
             for _ in range(n_inner_iter):
                 inner_opt.zero_grad()
@@ -69,12 +68,12 @@ def meta_train_reacher(policy,ml3_loss,dmodel,env,task_loss_fn,goals,n_outer_ite
                     s, a, g = policy.roll_out(fpolicy,goal,time_horizon,dmodel,env)
                     task_loss = task_loss_fn(a,s[:], goal).mean()
 
-           #collect losses for logging
+            # collect losses for logging
             all_loss +=task_loss
 
             if outer_i % 100 == 0:
                 print("meta iter: {} loss: {}".format(outer_i, task_loss.item()))
-                #roll out in real environment, to monitor training and tp collect data for dynamics model update
+                # roll out in real environment, to monitor training and tp collect data for dynamics model update
                 states, actions, _ = policy.roll_out(fpolicy,goal,time_horizon,dmodel,env,real_rollout=True)
 
                 if outer_i % 300 == 0 and outer_i < 3001:
@@ -83,22 +82,17 @@ def meta_train_reacher(policy,ml3_loss,dmodel,env,task_loss_fn,goals,n_outer_ite
             # backprop grad wrt to task loss
             task_loss.backward()
 
-
-
-
-        #step optimizer to update meta loss network
+        # step optimizer to update meta loss network
         meta_opt.step()
-        torch.save(ml3_loss.model.state_dict(), 'data/ml3_loss_reacher.pt')
+        torch.save(ml3_loss.model.state_dict(), f'{exp_folder}/ml3_loss_reacher.pt')
 
 
-
-def meta_train_shaped_sine(n_outer_iter,shaped,num_task,n_inner_iter,sine_model,ml3_loss,task_loss_fn):
+def meta_train_shaped_sine(n_outer_iter,shaped,num_task,n_inner_iter,sine_model,ml3_loss,task_loss_fn, exp_folder):
     theta_ranges = []
     landscape_with_extra = []
     landscape_mse = []
 
     meta_opt = torch.optim.Adam(ml3_loss.model.parameters(), lr=ml3_loss.learning_rate)
-
 
     for outer_i in range(n_outer_iter):
         # set gradient with respect to meta loss parameters to 0
@@ -128,9 +122,7 @@ def meta_train_shaped_sine(n_outer_iter,shaped,num_task,n_inner_iter,sine_model,
                 sine_model.freq = torch.nn.Parameter(fmodel.freq.clone().detach())
                 inner_opt = torch.optim.SGD([sine_model.freq], lr=sine_model.learning_rate)
 
-
                 ''' updating the meta network '''
-
                 ml3_loss.model.zero_grad()
                 meta_opt.zero_grad()
                 task_loss.mean().backward()
@@ -139,14 +131,14 @@ def meta_train_shaped_sine(n_outer_iter,shaped,num_task,n_inner_iter,sine_model,
         if outer_i%100==0:
             print("task loss: {}".format(task_loss.mean().item()))
 
-        torch.save(ml3_loss.model.state_dict(), 'data/ml3_loss_shaped_sine_' + str(shaped) + '.pt')
+        torch.save(ml3_loss.model.state_dict(), f'{exp_folder}/ml3_loss_shaped_sine_' + str(shaped) + '.pt')
 
         if outer_i%10==0:
-            t_range, l_with_extra, l_mse = plot_loss(shaped)
+            t_range, l_with_extra, l_mse = plot_loss(shaped, exp_folder)
             theta_ranges.append(t_range)
             landscape_with_extra.append(l_with_extra)
             landscape_mse.append(l_mse)
-    np.save('data/theta_ranges_'+str(shaped)+'_.npy', theta_ranges)
-    np.save('data/landscape_with_extra_'+str(shaped)+'_.npy',landscape_with_extra)
-    np.save('data/landscape_mse_'+str(shaped)+'_.npy',landscape_mse)
+    np.save(f'{exp_folder}/theta_ranges_'+str(shaped)+'_.npy', theta_ranges)
+    np.save(f'{exp_folder}/landscape_with_extra_'+str(shaped)+'_.npy',landscape_with_extra)
+    np.save(f'{exp_folder}/landscape_mse_'+str(shaped)+'_.npy',landscape_mse)
 

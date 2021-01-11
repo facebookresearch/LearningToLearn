@@ -44,8 +44,8 @@ def generate_sinusoid_batch(num_tasks, num_examples_task, num_steps, random_step
 
 if __name__ == '__main__':
 
-    if not os.path.isdir(EXP_FOLDER):
-        os.mkdir(EXP_FOLDER)
+    if not os.path.exists(EXP_FOLDER):
+        os.makedirs(EXP_FOLDER)
 
     shaped = sys.argv[2]=='True'
     torch.manual_seed(0)
@@ -66,7 +66,7 @@ if __name__ == '__main__':
     task_loss_fn = Task_loss()
 
     if sys.argv[1] == 'train':
-        meta_train(n_outer_iter, shaped, num_task, n_inner_iter, sine_model, ml3_loss,task_loss_fn)
+        meta_train(n_outer_iter, shaped, num_task, n_inner_iter, sine_model, ml3_loss,task_loss_fn, EXP_FOLDER)
 
     if sys.argv[1] == 'test':
         freq=0.7

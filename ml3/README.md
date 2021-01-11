@@ -24,17 +24,17 @@ python experiments/mbrl_reacher.py test
 #### Learning with extra information at meta-train time
 ##### For meta learning the loss with or without extra information on sine function run:
 ```
-python experiments/shaped_sine.py train extra_info=True
+python experiments/shaped_sine.py train True
 ```
 To test the loss with or without extra information run:
 ```
-python experiments/shaped_sine.py test extra_info=True
+python experiments/shaped_sine.py test True
 ```
 ##### For meta learning the loss with or without additional goal in the mountain car experiment run:
 ```
-python experiments/mountain_car.py train extra_info=True
+python experiments/mountain_car.py train True
 ```
 To test the loss with or without extra goal run:
 ```
-python experiments/mountain_car.py test extra_info=True
+python experiments/mountain_car.py True
 ```

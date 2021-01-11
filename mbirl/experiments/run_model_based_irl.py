@@ -187,9 +187,9 @@ if __name__ == '__main__':
     time_horizon = expert_demo.shape[0]
 
     # type of cost
-    cost_type = 'Weighted'
+    #cost_type = 'Weighted'
     #cost_type = 'TimeDep'
-    #cost_type = 'RBF'
+    cost_type = 'RBF'
 
     learnable_cost = None
 

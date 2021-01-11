@@ -1,6 +1,6 @@
 ## MBIRL - Model Based Inverse Reinforcement Learning
 
-### Simulation
+### Simulation with ground truth keypoint predictions
 
 #### Generate expert demonstrations
 1. ```python mbirl/generate_expert_demo.py``` 
@@ -14,3 +14,5 @@
 1. ```jupyter notebook```
 2. Access the notebook in the browser in 'mbirl/experiments/plot_mbirl_training_and_eval.ipynb'
 
+### Simulation with learned keypoint representation and dynamics
+COMING SOON

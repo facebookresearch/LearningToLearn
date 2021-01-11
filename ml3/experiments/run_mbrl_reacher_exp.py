@@ -80,7 +80,7 @@ if __name__ == '__main__':
             states, actions = random_babbling(env, time_horizon)
             dmodel.train(torch.Tensor(states), torch.Tensor(actions))
 
-        meta_train(policy, ml3_loss,dmodel,env, task_loss, goals, n_outer_iter, n_inner_iter, time_horizon)
+        meta_train(policy, ml3_loss,dmodel,env, task_loss, goals, n_outer_iter, n_inner_iter, time_horizon, EXP_FOLDER)
 
     if sys.argv[1] == 'test':
         ml3_loss.model.load_state_dict(torch.load(f"{EXP_FOLDER}/ml3_loss_reacher.pt"))

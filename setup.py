@@ -5,7 +5,7 @@
 #######################################################################
 from setuptools import setup, find_packages
 
-install_requires = ["higher", "matplotlib", "termcolor", "differentiable_robot_model", "jupyter"]
+install_requires = ["higher", "pybullet", "matplotlib", "termcolor", "differentiable_robot_model", "jupyter"]
 
 setup(
     name="l2l",

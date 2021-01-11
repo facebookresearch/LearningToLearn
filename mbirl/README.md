@@ -2,7 +2,7 @@
 
 ### Simulation
 
-#### Generate Data
+#### Generate expert demonstrations
 1. ```python mbirl/generate_expert_demo.py``` 
 2. Check the data and visualizations of the demonstration in 'mbirl/traj_data'
 

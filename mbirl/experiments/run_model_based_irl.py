@@ -1,24 +1,20 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 import random
-import os, sys
+import os
 import torch
 import numpy as np
 import higher
 import mbirl
-import dill as pickle
-from os.path import dirname, abspath
 import matplotlib.pyplot as plt
 
 from differentiable_robot_model import DifferentiableRobotModel
 
-_ROOT_DIR = dirname(abspath(__file__))
-sys.path.append(_ROOT_DIR)
-
 from mbirl.learnable_costs import LearnableWeightedCost, LearnableTimeDepWeightedCost, LearnableRBFWeightedCost
 from mbirl.keypoint_mpc import KeypointMPCWrapper
 
-traj_data_dir = os.path.join(_ROOT_DIR, 'traj_data')
-model_data_dir = os.path.join(_ROOT_DIR, 'model_data')
+EXP_FOLDER = os.path.join(mbirl.__path__[0], "experiments")
+traj_data_dir = os.path.join(EXP_FOLDER, 'traj_data')
+model_data_dir = os.path.join(EXP_FOLDER, 'traj_data')
 
 
 # The IRL Loss, the learning objective for the learnable cost functions.
@@ -72,10 +68,10 @@ def irl_training(learnable_cost, robot_model, irl_loss_fn, train_trajs, test_tra
     irl_loss_dems = []
     # initial loss before training
 
-    vid_dir = os.path.join(model_data_dir, data_type, cost_type)
+    plots_dir = os.path.join(model_data_dir, data_type, cost_type)
 
-    if not os.path.exists(vid_dir):
-        os.makedirs(vid_dir)
+    if not os.path.exists(plots_dir):
+        os.makedirs(plots_dir)
 
     for demo_i in range(len(train_trajs)):
         expert_demo_dict = train_trajs[demo_i]
@@ -139,7 +135,7 @@ def irl_training(learnable_cost, robot_model, irl_loss_fn, train_trajs, test_tra
                 plt.plot(pred_traj[:, 7].detach(), pred_traj[:, 9].detach(), 'o')
                 plt.plot(expert_demo[:, 0], expert_demo[:, 2], 'x')
                 plt.title("outer i: {}".format(outer_i))
-                plt.savefig(os.path.join(vid_dir, f'{demo_i}_{outer_i}.png'))
+                plt.savefig(os.path.join(plots_dir, f'{demo_i}_{outer_i}.png'))
 
         irl_loss_on_train.append(torch.Tensor(irl_loss_dems).mean())
         test_irl_losses = evaluate_action_optimization(learnable_cost.eval(), robot_model, irl_loss_fn, test_trajs,
@@ -161,7 +157,7 @@ def irl_training(learnable_cost, robot_model, irl_loss_fn, train_trajs, test_tra
     plt.plot(pred_traj[:, 7].detach(), pred_traj[:, 9].detach(), 'o')
     plt.plot(expert_demo[:, 0], expert_demo[:, 2], 'x')
     plt.title("final")
-    plt.savefig(os.path.join(vid_dir, f'{demo_i}_final.png'))
+    plt.savefig(os.path.join(plots_dir, f'{demo_i}_final.png'))
 
     return torch.stack(irl_loss_on_train), torch.stack(irl_loss_on_test), learnable_cost_params, pred_traj
 
@@ -173,13 +169,12 @@ if __name__ == '__main__':
 
     rest_pose = [0.0, 0.0, 0.0, 1.57079633, 0.0, 1.03672558, 0.0]
 
-    rel_urdf_path = '../env/kuka_iiwa/urdf/iiwa7_ft_with_obj_keypts.urdf'
+    rel_urdf_path = 'env/kuka_iiwa/urdf/iiwa7_ft_with_obj_keypts.urdf'
     urdf_path = os.path.join(mbirl.__path__[0], rel_urdf_path)
     robot_model = DifferentiableRobotModel(urdf_path=urdf_path, name="kuka_w_obj_keypts")
 
     data_type = 'placing'
-    with open(f'{traj_data_dir}/traj_data_{data_type}.pkl', 'rb') as f:
-        trajs = pickle.load(f)
+    trajs = torch.load(f'{traj_data_dir}/traj_data_{data_type}.pt')
 
     traj = trajs[0]
     traj_len = len(traj['desired_keypoints'])

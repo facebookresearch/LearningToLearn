@@ -5,10 +5,10 @@
 #######################################################################
 from setuptools import setup, find_packages
 
-install_requires = ["numpy", "higher", "matplotlib", "termcolor", "pybullet", "differentiable_robot_model", "dill", "jupyter"]
+install_requires = ["numpy", "higher", "matplotlib", "termcolor", "differentiable_robot_model", "jupyter"]
 
 setup(
-    name="ml3",
+    name="l2l",
     author="Facebook AI Research",
     author_email="",
     version=1.0,

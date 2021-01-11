@@ -1,17 +1,19 @@
 # LearningToLearn
 This repository contains code for 
+* ML3: Meta-Learning via Learned Losses ([pdf](https://arxiv.org/pdf/1906.05374.pdf))
+* MBIRL: Model-Based Inverse Reinforcement Learning from Visual Demonstrations ([pdf](https://arxiv.org/pdf/2010.09034.pdf))
 
 ## Setup
 In the LearningToLearn folder, run:
 
 ```
-conda create -n ml3 python=3.7
-conda activate ml3
+conda create -n l2l python=3.7
+conda activate l2l 
 python setup.py develop
 ```
 
 ## ML3 paper experiments and citation
-To reproduce results of the ML3 paper follow the README instructions in the ML3 folder
+To reproduce results of the ML3 paper follow the README instructions in the `ml3` folder
 
 #### Citation
 ```
@@ -22,8 +24,8 @@ booktitle = {International Conference on Pattern Recognition, {ICPR}, Italy, Jan
 year      = {2021} }
 ```
 
-## MBIRL - Model Based Inverse Reinforcement Learning from Visual Demonstrations
-To reproduce results of the ML3 paper follow the README instructions in the ML3 folder
+## MBIRL paper experiments and citation
+To reproduce results of the MBIRL paper follow the README instructions in the `mbirl` folder
 
 #### Citation
 ```

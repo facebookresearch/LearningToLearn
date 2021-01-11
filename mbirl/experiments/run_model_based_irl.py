@@ -14,7 +14,7 @@ from mbirl.keypoint_mpc import KeypointMPCWrapper
 
 EXP_FOLDER = os.path.join(mbirl.__path__[0], "experiments")
 traj_data_dir = os.path.join(EXP_FOLDER, 'traj_data')
-model_data_dir = os.path.join(EXP_FOLDER, 'traj_data')
+model_data_dir = os.path.join(EXP_FOLDER, 'model_data')
 
 
 # The IRL Loss, the learning objective for the learnable cost functions.

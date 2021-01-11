@@ -25,8 +25,8 @@ class Task_loss(object):
 
 if __name__ == '__main__':
 
-    if not os.path.isdir(EXP_FOLDER):
-        os.mkdir(EXP_FOLDER)
+    if not os.path.exists(EXP_FOLDER):
+        os.makedirs(EXP_FOLDER)
 
     np.random.seed(0)
     torch.manual_seed(0)
@@ -72,9 +72,9 @@ if __name__ == '__main__':
             np.save(f"{EXP_FOLDER}/ml3_mc_states.npy", states)
 
         if shaped_loss:
-            env.render(list(np.array(states)[:, 0]), file_path=f"{EXP_FOLDER}/plots/shaped_ml3_mc.gif")
+            env.render(list(np.array(states)[:, 0]), file_path=f"{EXP_FOLDER}/shaped_ml3_mc.gif")
         else:
-            env.render(list(np.array(states)[:, 0]), file_path=f"{EXP_FOLDER}/plots/ml3_mc.gif")
+            env.render(list(np.array(states)[:, 0]), file_path=f"{EXP_FOLDER}/ml3_mc.gif")
 
 
 

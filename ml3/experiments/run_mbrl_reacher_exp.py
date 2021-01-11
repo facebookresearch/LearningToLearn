@@ -35,8 +35,8 @@ def random_babbling(env, time_horizon):
 
 if __name__ == '__main__':
 
-    if not os.path.isdir(EXP_FOLDER):
-        os.mkdir(EXP_FOLDER)
+    if not os.path.exists(EXP_FOLDER):
+        os.makedirs(EXP_FOLDER)
 
     np.random.seed(0)
     torch.manual_seed(0)

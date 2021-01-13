@@ -25,7 +25,7 @@ year      = {2021} }
 ```
 
 ## MBIRL paper experiments and citation
-To reproduce results of the MBIRL paper follow the README instructions in the `mbirl` folder
+To test our MBIRL algorithm follow the README instructions in the `mbirl` folder
 
 #### Citation
 ```

@@ -2,8 +2,8 @@
 .DS_Store
 __pycache__
 *.egg-info
-*/data/*
-*/model_data/*
-*/traj_data/*
-*/plots/*
-*/.ipynb_checkpoints/*
+**/data/*
+**/model_data/*
+**/traj_data/*
+**/plots/*
+**/.ipynb_checkpoints/*

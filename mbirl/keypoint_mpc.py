@@ -9,7 +9,7 @@ joint_limits = [2.967, 2.094, 2.967, 2.094, 2.967, 2.094, 3.054]
 # A wrapper class keypoint MPC with action parameters to be optimized
 # This implementation assumes object keypoints are known and part of the robot model
 # this means the  keypoint dynamics model can be implemented through a forward kinematics call
-class KeypointMPCWrapper(torch.nn.Module):
+class GroundTruthKeypointMPCWrapper(torch.nn.Module):
 
     def __init__(self, model, time_horizon, n_keypt_dim):
         super().__init__()

@@ -49,7 +49,7 @@ python experiments/run_mountain_car_exp.py train True
 ```
 To test the loss with extra goal run:
 ```
-python experiments/run_mountain_car_exp.py True
+python experiments/run_mountain_car_exp.py test True
 ```
 The test script generates a gif of the final policy, and stores it in the experiment folder 
 To see how these results compare to not using the extra info, run the above scripts with the 2nd argument being `False`

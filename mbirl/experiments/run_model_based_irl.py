@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 from differentiable_robot_model import DifferentiableRobotModel
 
 from mbirl.learnable_costs import LearnableWeightedCost, LearnableTimeDepWeightedCost, LearnableRBFWeightedCost
-from mbirl.keypoint_mpc import KeypointMPCWrapper
+from mbirl.keypoint_mpc import GroundTruthKeypointMPCWrapper
 
 EXP_FOLDER = os.path.join(mbirl.__path__[0], "experiments")
 traj_data_dir = os.path.join(EXP_FOLDER, 'traj_data')
@@ -38,7 +38,7 @@ def evaluate_action_optimization(learned_cost, robot_model, irl_loss_fn, trajs, 
         expert_demo = torch.Tensor(expert_demo)
         time_horizon, n_keypt_dim = expert_demo.shape
 
-        keypoint_mpc_wrapper = KeypointMPCWrapper(robot_model, time_horizon=time_horizon - 1, n_keypt_dim=n_keypt_dim)
+        keypoint_mpc_wrapper = GroundTruthKeypointMPCWrapper(robot_model, time_horizon=time_horizon - 1, n_keypt_dim=n_keypt_dim)
         action_optimizer = torch.optim.SGD(keypoint_mpc_wrapper.parameters(), lr=action_lr)
 
         for i in range(n_inner_iter):
@@ -81,7 +81,7 @@ def irl_training(learnable_cost, robot_model, irl_loss_fn, train_trajs, test_tra
         expert_demo = torch.Tensor(expert_demo)
         time_horizon, n_keypt_dim = expert_demo.shape
 
-        keypoint_mpc_wrapper = KeypointMPCWrapper(robot_model, time_horizon=time_horizon - 1, n_keypt_dim=n_keypt_dim)
+        keypoint_mpc_wrapper = GroundTruthKeypointMPCWrapper(robot_model, time_horizon=time_horizon - 1, n_keypt_dim=n_keypt_dim)
         # unroll and extract expected features
         pred_traj = keypoint_mpc_wrapper.roll_out(start_pose.clone())
 
@@ -110,8 +110,8 @@ def irl_training(learnable_cost, robot_model, irl_loss_fn, train_trajs, test_tra
             expert_demo = torch.Tensor(expert_demo)
             time_horizon, n_keypt_dim = expert_demo.shape
 
-            keypoint_mpc_wrapper = KeypointMPCWrapper(robot_model, time_horizon=time_horizon - 1,
-                                                      n_keypt_dim=n_keypt_dim)
+            keypoint_mpc_wrapper = GroundTruthKeypointMPCWrapper(robot_model, time_horizon=time_horizon - 1,
+                                                                 n_keypt_dim=n_keypt_dim)
             action_optimizer = torch.optim.SGD(keypoint_mpc_wrapper.parameters(), lr=action_lr)
 
             with higher.innerloop_ctx(keypoint_mpc_wrapper, action_optimizer) as (fpolicy, diffopt):

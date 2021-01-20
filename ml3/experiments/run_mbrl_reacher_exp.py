@@ -3,6 +3,7 @@ import sys
 import os
 import numpy as np
 import torch
+import pybullet
 import ml3
 from ml3.envs.reacher_sim import ReacherSimulation
 from ml3.mbrl_utils import Dynamics
@@ -42,7 +43,7 @@ if __name__ == '__main__':
     torch.manual_seed(0)
 
     # create Reacher simulation
-    env = ReacherSimulation(gui=True)
+    env = ReacherSimulation(gui=False)
 
     # initialize policy and save initialization for training
     policy = Policy(8,2)
@@ -58,17 +59,12 @@ if __name__ == '__main__':
     # initialize learned dynamics model
     dmodel = Dynamics(env)
 
-    # randomly create 5 goals for training
-    num_task = 5
-    x = np.random.uniform(-0.2, 0.2, num_task)
-    y = np.random.uniform(-0.2, 0.2, num_task)
-    np.random.shuffle(x)
-    np.random.shuffle(y)
-    z = np.zeros([num_task, 1])
-    xygoals = np.vstack([x.T, y.T]).reshape(num_task, 2)
-    xygoals = np.hstack([xygoals, z])
+    # generate training task
+    num_task = 1
+    train_goal = np.array(env.get_target_joint_configuration(np.array([0.02534078, 0.19863741, 0.0])))
+    train_goal = np.hstack([train_goal, np.zeros(2)])
 
-    goals = [np.hstack([np.array(env.get_target_joint_configuration(np.array(xy))),np.zeros(2)]) for xy in xygoals]
+    goals = [train_goal]
     time_horizon = 65
 
     if sys.argv[1] == 'train':
@@ -86,7 +82,8 @@ if __name__ == '__main__':
         ml3_loss.model.load_state_dict(torch.load(f"{EXP_FOLDER}/ml3_loss_reacher.pt"))
         ml3_loss.model.eval()
         opt_iter = 2
-        test_goal = np.array(env.get_target_joint_configuration(np.array([0.02534078, 0.19863741, 0.0])))
+        xy = [0.05534078, 0.15863741]
+        test_goal = np.array(env.get_target_joint_configuration(np.array([xy[0], xy[1], 0.0])))
         test_goal = np.hstack([test_goal, np.zeros(2)])
         args = (torch.Tensor(test_goal),time_horizon,None,env,True)
         states = test_ml3_loss(policy, ml3_loss,opt_iter,*args)

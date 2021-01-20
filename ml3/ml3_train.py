@@ -57,9 +57,9 @@ def meta_train_reacher(policy,ml3_loss,dmodel,env,task_loss_fn,goals,n_outer_ite
             for _ in range(n_inner_iter):
                 inner_opt.zero_grad()
                 policy.reset_gradients()
+                policy.model.zero_grad()
                 with higher.innerloop_ctx(policy.model, inner_opt, copy_initial_weights=False) as (fpolicy, diffopt):
                     # use current meta loss to update model
-                    fpolicy.zero_grad()
                     s_tr, a_tr, g_tr  = policy.roll_out(fpolicy,goal,time_horizon,dmodel,env)
                     meta_input = torch.cat((torch.cat((s_tr[:-1].detach(),a_tr),dim=1), g_tr.detach()),dim=1)/ml3_loss.norm_in
                     pred_task_loss = ml3_loss.model(meta_input).mean()
@@ -70,17 +70,18 @@ def meta_train_reacher(policy,ml3_loss,dmodel,env,task_loss_fn,goals,n_outer_ite
 
             # collect losses for logging
             all_loss +=task_loss
+            # backprop grad wrt to task loss
+            task_loss.backward()
 
             if outer_i % 100 == 0:
-                print("meta iter: {} loss: {}".format(outer_i, task_loss.item()))
+                #print("meta iter: {} loss: {}".format(outer_i, all_loss.item()/len(goals)))
                 # roll out in real environment, to monitor training and tp collect data for dynamics model update
                 states, actions, _ = policy.roll_out(fpolicy,goal,time_horizon,dmodel,env,real_rollout=True)
-
+                print("meta iter: {} loss: {}".format(outer_i, (torch.mean((states[-1,:2]-goal[:2])**2))))
                 if outer_i % 300 == 0 and outer_i < 3001:
                     # update dynamics model under current optimal policy
                     dmodel.train(torch.Tensor(states), torch.Tensor(actions))
-            # backprop grad wrt to task loss
-            task_loss.backward()
+
 
         # step optimizer to update meta loss network
         meta_opt.step()

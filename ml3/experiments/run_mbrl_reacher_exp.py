@@ -43,7 +43,7 @@ if __name__ == '__main__':
     torch.manual_seed(0)
 
     # create Reacher simulation
-    env = ReacherSimulation(gui=True)
+    env = ReacherSimulation(gui=False)
 
     # initialize policy and save initialization for training
     policy = Policy(8,2)
@@ -85,7 +85,6 @@ if __name__ == '__main__':
         xy = [0.05534078, 0.15863741]
         test_goal = np.array(env.get_target_joint_configuration(np.array([xy[0], xy[1], 0.0])))
         test_goal = np.hstack([test_goal, np.zeros(2)])
-        env.cubeId = pybullet.loadURDF("sphere_small.urdf", [xy[0], xy[1], 0.01])
         args = (torch.Tensor(test_goal),time_horizon,None,env,True)
         states = test_ml3_loss(policy, ml3_loss,opt_iter,*args)
 

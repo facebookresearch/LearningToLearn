@@ -82,7 +82,9 @@ if __name__ == '__main__':
         ml3_loss.model.load_state_dict(torch.load(f"{EXP_FOLDER}/ml3_loss_reacher.pt"))
         ml3_loss.model.eval()
         opt_iter = 2
+
         xy = [0.05534078, 0.150863741]
+
         test_goal = np.array(env.get_target_joint_configuration(np.array([xy[0], xy[1], 0.0])))
         test_goal = np.hstack([test_goal, np.zeros(2)])
         args = (torch.Tensor(test_goal),time_horizon,None,env,True)

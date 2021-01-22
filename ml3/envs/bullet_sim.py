@@ -56,7 +56,6 @@ class BulletSimulation(object):
         return np.array(trajectory)
 
     def get_target_joint_configuration(self, target_position):
-        print(target_position)
         self.reset()
         des_joint_state = self.sim.calculateInverseKinematics(self.robot_id,
                                                               self.ee_idx,

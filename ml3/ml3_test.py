@@ -29,8 +29,7 @@ def test_ml3_loss_reacher(policy,ml3_loss,opt_iter,*args):
         policy.reset_gradients()
         pred_task_loss.backward()
         opt.step()
-        print('last state: ', s_tr[-1])
-
+        #print('last state: ', s_tr[-1])
     return s_tr.detach().numpy()
 
 

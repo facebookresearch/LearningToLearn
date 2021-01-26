@@ -80,24 +80,17 @@ class Reacher_Policy(nn.Module):
         super(Reacher_Policy, self).__init__()
 
         num_neurons = 64
-        self.activation = torch.nn.Tanh()
-        # self.policy_params = torch.nn.Sequential(torch.nn.Linear(pi_in, num_neurons),
-        #                                          activation(),
-        #                                          torch.nn.Linear(num_neurons, num_neurons),
-        #                                          activation(),
-        #                                          torch.nn.Linear(num_neurons, pi_out))
-        self.layer1 = torch.nn.Linear(pi_in, num_neurons)
-        self.layer2 = torch.nn.Linear(num_neurons, num_neurons)
-        self.layer_out = torch.nn.Linear(num_neurons, pi_out)
-
+        self.activation = torch.nn.Tanh
+        self.policy_params = torch.nn.Sequential(torch.nn.Linear(pi_in, num_neurons),
+                                                 self.activation(),
+                                                 torch.nn.Linear(num_neurons, num_neurons),
+                                                 self.activation(),
+                                                 torch.nn.Linear(num_neurons, pi_out))
         self.learning_rate = 1e-4
         self.norm_in = torch.Tensor(np.array([1.0,1.0,8.0,8.0,1.0,1.0,1.0,1.0]))
 
     def forward(self, x):
-        x = self.activation(self.layer1(x))
-        x = self.activation(self.layer2(x))
-        x = self.layer_out(x)
-        return x
+        return self.policy_params(x)
 
     def reset_gradients(self):
         for i, param in enumerate(self.policy_params.parameters()):

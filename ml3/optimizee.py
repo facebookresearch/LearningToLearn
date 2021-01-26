@@ -47,15 +47,19 @@ class MC_Policy(nn.Module):
         super(MC_Policy, self).__init__()
 
         num_neurons = 200
-        self.model = nn.Sequential(nn.Linear(pi_in, num_neurons,bias=False),
-                                   nn.Linear(num_neurons, pi_out,bias=False))
+        self.policy = nn.Sequential(nn.Linear(pi_in, num_neurons,bias=False),
+                                    nn.Linear(num_neurons, pi_out,bias=False))
         self.learning_rate = 1e-3
 
+    def forward(self, x):
+        return self.policy(x)
+
     def reset_gradients(self):
-        for i, param in enumerate(self.model.parameters()):
+        for i, param in enumerate(self.policy.parameters()):
             param.detach()
 
-    def roll_out(self,fpolicy,s_0,goal,time_horizon):
+    def roll_out(self, s_0, goal, time_horizon):
+        # todo: should we maybe just initialize this in the init?
         env = MountainCar()
         state = torch.Tensor(env.reset_to(s_0))
         states = []
@@ -63,8 +67,8 @@ class MC_Policy(nn.Module):
         states.append(state)
         for t in range(time_horizon):
 
-            u = fpolicy.forward(state)
-            u = u.clamp(env.min_action,env.max_action)
+            u = self.forward(state)
+            u = u.clamp(env.min_action, env.max_action)
             state = env.sim_step_torch(state.squeeze(), u.squeeze()).clone()
             states.append(state.clone())
             actions.append(u.clone())
@@ -81,16 +85,16 @@ class Reacher_Policy(nn.Module):
 
         num_neurons = 64
         self.activation = torch.nn.Tanh
-        self.policy_params = torch.nn.Sequential(torch.nn.Linear(pi_in, num_neurons),
-                                                 self.activation(),
-                                                 torch.nn.Linear(num_neurons, num_neurons),
-                                                 self.activation(),
-                                                 torch.nn.Linear(num_neurons, pi_out))
+        self.policy = torch.nn.Sequential(torch.nn.Linear(pi_in, num_neurons),
+                                          self.activation(),
+                                          torch.nn.Linear(num_neurons, num_neurons),
+                                          self.activation(),
+                                          torch.nn.Linear(num_neurons, pi_out))
         self.learning_rate = 1e-4
         self.norm_in = torch.Tensor(np.array([1.0,1.0,8.0,8.0,1.0,1.0,1.0,1.0]))
 
     def forward(self, x):
-        return self.policy_params(x)
+        return self.policy(x)
 
     def reset_gradients(self):
         for i, param in enumerate(self.policy_params.parameters()):

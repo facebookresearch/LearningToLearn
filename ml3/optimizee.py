@@ -80,20 +80,30 @@ class Reacher_Policy(nn.Module):
         super(Reacher_Policy, self).__init__()
 
         num_neurons = 64
-        activation = torch.nn.Tanh
-        self.model = torch.nn.Sequential(torch.nn.Linear(pi_in, num_neurons),
-                                         activation(),
-                                         torch.nn.Linear(num_neurons, num_neurons),
-                                         activation(),
-                                         torch.nn.Linear(num_neurons, pi_out))
-        self.learning_rate=1e-4
+        self.activation = torch.nn.Tanh()
+        # self.policy_params = torch.nn.Sequential(torch.nn.Linear(pi_in, num_neurons),
+        #                                          activation(),
+        #                                          torch.nn.Linear(num_neurons, num_neurons),
+        #                                          activation(),
+        #                                          torch.nn.Linear(num_neurons, pi_out))
+        self.layer1 = torch.nn.Linear(pi_in, num_neurons)
+        self.layer2 = torch.nn.Linear(num_neurons, num_neurons)
+        self.layer_out = torch.nn.Linear(num_neurons, pi_out)
+
+        self.learning_rate = 1e-4
         self.norm_in = torch.Tensor(np.array([1.0,1.0,8.0,8.0,1.0,1.0,1.0,1.0]))
 
+    def forward(self, x):
+        x = self.activation(self.layer1(x))
+        x = self.activation(self.layer2(x))
+        x = self.layer_out(x)
+        return x
+
     def reset_gradients(self):
-        for i, param in enumerate(self.model.parameters()):
+        for i, param in enumerate(self.policy_params.parameters()):
             param.detach()
 
-    def roll_out(self,fpolicy,goal,time_horizon,dmodel,env,real_rollout=False):
+    def roll_out(self, goal, time_horizon, dmodel, env, real_rollout=False):
 
         state = torch.Tensor(env.reset())
         states = []
@@ -101,16 +111,16 @@ class Reacher_Policy(nn.Module):
         states.append(state.clone())
         for t in range(time_horizon):
 
-            u = fpolicy(torch.cat((state.detach(),goal[:]),dim=0)/self.norm_in)
-            u = u.clamp(-1.0,1.0)
+            u = self.forward(torch.cat((state.detach(), goal[:]), dim=0) / self.norm_in)
+            u = u.clamp(-1.0, 1.0)
             if not real_rollout:
-                next_state = dmodel.step_model(state.squeeze(), u.squeeze()).clone()
+                pred_next_state = dmodel.step_model(state.squeeze(), u.squeeze()).clone()
             else:
-                next_state = torch.Tensor(env.step_model(state.squeeze().detach().numpy(), u.squeeze().detach().numpy()).copy())
-            states.append(next_state.clone())
+                pred_next_state = torch.Tensor(env.step_model(state.squeeze().detach().numpy(), u.squeeze().detach().numpy()).copy())
+            states.append(pred_next_state.clone())
             actions.append(u.clone())
-            state_cost = torch.norm(next_state[:]-goal[:]).detach().unsqueeze(0)
-            state = next_state.clone()
+            state_cost = torch.norm(pred_next_state[:]-goal[:]).detach().unsqueeze(0)
+            state = pred_next_state.clone()
 
         # rewards to pass to meta loss
         rewards = [state_cost]*time_horizon

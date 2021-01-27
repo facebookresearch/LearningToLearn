@@ -50,6 +50,7 @@ class MC_Policy(nn.Module):
         self.policy = nn.Sequential(nn.Linear(pi_in, num_neurons,bias=False),
                                     nn.Linear(num_neurons, pi_out,bias=False))
         self.learning_rate = 1e-3
+        self.env = MountainCar()
 
     def forward(self, x):
         return self.policy(x)
@@ -59,17 +60,15 @@ class MC_Policy(nn.Module):
             param.detach()
 
     def roll_out(self, s_0, goal, time_horizon):
-        # todo: should we maybe just initialize this in the init?
-        env = MountainCar()
-        state = torch.Tensor(env.reset_to(s_0))
+        state = torch.Tensor(self.env.reset_to(s_0))
         states = []
         actions = []
         states.append(state)
         for t in range(time_horizon):
 
             u = self.forward(state)
-            u = u.clamp(env.min_action, env.max_action)
-            state = env.sim_step_torch(state.squeeze(), u.squeeze()).clone()
+            u = u.clamp(self.env.min_action, self.env.max_action)
+            state = self.env.sim_step_torch(state.squeeze(), u.squeeze()).clone()
             states.append(state.clone())
             actions.append(u.clone())
 
@@ -80,7 +79,7 @@ class MC_Policy(nn.Module):
 
 class Reacher_Policy(nn.Module):
 
-    def __init__(self, pi_in, pi_out):
+    def __init__(self, pi_in, pi_out,exp_folder):
         super(Reacher_Policy, self).__init__()
 
         num_neurons = 64
@@ -92,13 +91,15 @@ class Reacher_Policy(nn.Module):
                                           torch.nn.Linear(num_neurons, pi_out))
         self.learning_rate = 1e-4
         self.norm_in = torch.Tensor(np.array([1.0,1.0,8.0,8.0,1.0,1.0,1.0,1.0]))
+        self.exp_folder = exp_folder
+        torch.save(self.state_dict(), f"{self.exp_folder}/init_policy.pt")
 
     def forward(self, x):
         return self.policy(x)
 
-    def reset_gradients(self):
-        for i, param in enumerate(self.policy_params.parameters()):
-            param.detach()
+    def reset(self):
+        self.load_state_dict(torch.load(f"{self.exp_folder}/init_policy.pt"))
+        self.eval()
 
     def roll_out(self, goal, time_horizon, dmodel, env, real_rollout=False):
 

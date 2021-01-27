@@ -55,6 +55,9 @@ class Ml3_loss_mountain_car(nn.Module):
                                          torch.nn.Linear(num_neurons, meta_out))
         self.learning_rate = 1e-3
 
+    def forward(self, x):
+        return self.model(x)
+
 
 class Ml3_loss_reacher(nn.Module):
 
@@ -75,7 +78,7 @@ class Ml3_loss_reacher(nn.Module):
         self.norm_in = torch.Tensor(np.expand_dims(np.array([1.0, 1.0, 8.0, 8.0, 1.0, 1.0,1.0]), axis=0))
 
     def forward(self, x):
-        return self.loss_fun(x)
+        return self.loss_fun(x/self.norm_in)
 
 
 class Ml3_loss_shaped_sine(object):

@@ -9,7 +9,7 @@ from ml3.envs.reacher_sim import ReacherSimulation
 from ml3.mbrl_utils import Dynamics
 from ml3.learnable_losses import Ml3_loss_reacher as Ml3_loss
 from ml3.optimizee import Reacher_Policy as Policy
-from ml3.ml3_train import meta_train_reacher as meta_train
+from ml3.ml3_train import meta_train_mbrl_reacher as meta_train
 from ml3.ml3_test import test_ml3_loss_reacher as test_ml3_loss
 
 EXP_FOLDER = os.path.join(ml3.__path__[0], "experiments/data/mbrl_reacher")
@@ -46,13 +46,11 @@ if __name__ == '__main__':
     env = ReacherSimulation(gui=False)
 
     # initialize policy and save initialization for training
-    policy = Policy(8,2)
-    torch.save(policy.model.state_dict(), f"{EXP_FOLDER}/init_policy.pt")
-    policy.model.load_state_dict(torch.load(f"{EXP_FOLDER}/init_policy.pt"))
-    policy.model.eval()
+    policy = Policy(8, 2, EXP_FOLDER)
+    policy.reset()
 
     # initialize learned loss
-    ml3_loss = Ml3_loss(7,1)
+    ml3_loss = Ml3_loss(7, 1)
     # initialize task loss for meta training
     task_loss = Task_loss()
 
@@ -69,7 +67,7 @@ if __name__ == '__main__':
 
     if sys.argv[1] == 'train':
 
-        n_outer_iter = 3000
+        n_outer_iter = 3000  # 3000
         n_inner_iter = 1
 
         for random_data in range(3):
@@ -79,8 +77,8 @@ if __name__ == '__main__':
         meta_train(policy, ml3_loss,dmodel,env, task_loss, goals, n_outer_iter, n_inner_iter, time_horizon, EXP_FOLDER)
 
     if sys.argv[1] == 'test':
-        ml3_loss.model.load_state_dict(torch.load(f"{EXP_FOLDER}/ml3_loss_reacher.pt"))
-        ml3_loss.model.eval()
+        ml3_loss.load_state_dict(torch.load(f"{EXP_FOLDER}/ml3_loss_reacher.pt"))
+        ml3_loss.eval()
         opt_iter = 2
 
         xy = [0.05534078, 0.150863741]
@@ -88,6 +86,6 @@ if __name__ == '__main__':
         test_goal = np.array(env.get_target_joint_configuration(np.array([xy[0], xy[1], 0.0])))
         test_goal = np.hstack([test_goal, np.zeros(2)])
         args = (torch.Tensor(test_goal),time_horizon,None,env,True)
-        print('goal joint position:', test_goal)
+        print('goal joint position:', test_goal[:2])
         states = test_ml3_loss(policy, ml3_loss,opt_iter,*args)
-        print('achieved joint position',states[-1])
+        print('achieved joint position',states[-1,:2])

@@ -80,7 +80,7 @@ class MC_Policy(nn.Module):
 
 class Reacher_Policy(nn.Module):
 
-    def __init__(self, pi_in, pi_out):
+    def __init__(self, pi_in, pi_out,exp_folder):
         super(Reacher_Policy, self).__init__()
 
         num_neurons = 64
@@ -92,13 +92,15 @@ class Reacher_Policy(nn.Module):
                                           torch.nn.Linear(num_neurons, pi_out))
         self.learning_rate = 1e-4
         self.norm_in = torch.Tensor(np.array([1.0,1.0,8.0,8.0,1.0,1.0,1.0,1.0]))
+        self.exp_folder = exp_folder
+        torch.save(self.state_dict(), f"{self.exp_folder}/init_policy.pt")
 
     def forward(self, x):
         return self.policy(x)
 
-    def reset_gradients(self):
-        for i, param in enumerate(self.policy_params.parameters()):
-            param.detach()
+    def reset(self):
+        self.load_state_dict(torch.load(f"{self.exp_folder}/init_policy.pt"))
+        self.eval()
 
     def roll_out(self, goal, time_horizon, dmodel, env, real_rollout=False):
 

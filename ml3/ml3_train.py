@@ -11,24 +11,23 @@ def meta_train_mountain_car(policy,ml3_loss,task_loss_fn,s_0,goal,goal_extra,n_o
     goal = torch.Tensor(goal)
     goal_extra = torch.Tensor(goal_extra)
 
-    inner_opt = torch.optim.SGD(policy.policy_params.parameters(), lr=policy.learning_rate)
-    meta_opt = torch.optim.Adam(ml3_loss.policy_params.parameters(), lr=ml3_loss.learning_rate)
+    inner_opt = torch.optim.SGD(policy.policy.parameters(), lr=policy.learning_rate)
+    meta_opt = torch.optim.Adam(ml3_loss.model.parameters(), lr=ml3_loss.learning_rate)
 
     for outer_i in range(n_outer_iter):
         # set gradient with respect to meta loss parameters to 0
         meta_opt.zero_grad()
-
-        with higher.innerloop_ctx(
-                policy.policy_params, inner_opt, copy_initial_weights=False) as (fpolicy, diffopt):
-            for _ in range(n_inner_iter):
+        for _ in range(n_inner_iter):
+            inner_opt.zero_grad()
+            with higher.innerloop_ctx(policy, inner_opt, copy_initial_weights=False) as (fpolicy, diffopt):
                 # use current meta loss to update model
-                s_tr, a_tr, g_tr  = policy.roll_out(fpolicy,s_0,goal,time_horizon)
+                s_tr, a_tr, g_tr  = fpolicy.roll_out(s_0,goal,time_horizon)
 
-                pred_task_loss = ml3_loss.policy_params(torch.cat((torch.cat((s_tr[:-1], a_tr), dim=1), g_tr), dim=1)).mean()
+                pred_task_loss = ml3_loss.model(torch.cat((torch.cat((s_tr[:-1], a_tr), dim=1), g_tr), dim=1)).mean()
                 diffopt.step(pred_task_loss)
 
             # compute task loss
-            s, a, g = policy.roll_out(fpolicy,s_0,goal,time_horizon)
+            s, a, g = fpolicy.roll_out(s_0,goal,time_horizon)
             task_loss = task_loss_fn(a,s[:], goal,goal_extra,shaped_loss)
             # backprop grad wrt to task loss
             task_loss.backward()
@@ -51,18 +50,14 @@ def meta_train_mbrl_reacher(policy, ml3_loss, dmodel, env, task_loss_fn, goals, 
         all_loss = 0
         for goal in goals:
             goal = torch.Tensor(goal)
-
-            # todo: replace with reset function, instead of loading initial policy
-            policy.load_state_dict(torch.load(f'{exp_folder}/init_policy.pt'))
+            policy.reset()
             inner_opt = torch.optim.SGD(policy.parameters(), lr=policy.learning_rate)
             for _ in range(n_inner_iter):
                 inner_opt.zero_grad()
-                # todo: there used to be a policy reset (of the gradients) here, is that necessary?
                 with higher.innerloop_ctx(policy, inner_opt, copy_initial_weights=False) as (fpolicy, diffopt):
                     # use current meta loss to update model
                     s_tr, a_tr, g_tr = fpolicy.roll_out(goal, time_horizon, dmodel, env)
-                    # todo: the normalization should happen in the loss fun
-                    meta_input = torch.cat((torch.cat((s_tr[:-1].detach(),a_tr),dim=1), g_tr.detach()),dim=1)/ml3_loss.norm_in
+                    meta_input = torch.cat((torch.cat((s_tr[:-1].detach(),a_tr),dim=1), g_tr.detach()),dim=1)
                     pred_task_loss = ml3_loss(meta_input).mean()
                     diffopt.step(pred_task_loss)
                     # compute task loss

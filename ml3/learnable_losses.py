@@ -45,10 +45,9 @@ class Ml3_loss_mountain_car(nn.Module):
     def __init__(self, meta_in, meta_out):
         super(Ml3_loss_mountain_car, self).__init__()
 
-
         activation = torch.nn.ELU
         num_neurons = 400
-        self.model = torch.nn.Sequential(torch.nn.Linear(meta_in, num_neurons),
+        self.loss_fn = torch.nn.Sequential(torch.nn.Linear(meta_in, num_neurons),
                                          activation(),
                                          torch.nn.Linear(num_neurons, num_neurons),
                                          activation(),
@@ -56,7 +55,7 @@ class Ml3_loss_mountain_car(nn.Module):
         self.learning_rate = 1e-3
 
     def forward(self, x):
-        return self.model(x)
+        return self.loss_fn(x)
 
 
 class Ml3_loss_reacher(nn.Module):
@@ -81,9 +80,10 @@ class Ml3_loss_reacher(nn.Module):
         return self.loss_fun(x/self.norm_in)
 
 
-class Ml3_loss_shaped_sine(object):
+class Ml3_loss_shaped_sine(nn.Module):
 
     def __init__(self, meta_in=3, meta_out=1):
+        super(Ml3_loss_shaped_sine, self).__init__()
         def init_weights(m):
             if type(m) == torch.nn.Linear:
                 torch.nn.init.xavier_uniform_(m.weight)
@@ -91,13 +91,14 @@ class Ml3_loss_shaped_sine(object):
 
         activation = torch.nn.ELU
         num_neurons = 10
-        self.model = torch.nn.Sequential(torch.nn.Linear(meta_in, num_neurons),activation(),
-                                         torch.nn.Linear(num_neurons, num_neurons), activation(),
-                                         torch.nn.Linear(num_neurons, num_neurons), activation(),
-                                         torch.nn.Linear(num_neurons, meta_out))
+        self.loss_fn = torch.nn.Sequential(torch.nn.Linear(meta_in, num_neurons), activation(),
+                                           torch.nn.Linear(num_neurons, num_neurons), activation(),
+                                           torch.nn.Linear(num_neurons, num_neurons), activation(),
+                                           torch.nn.Linear(num_neurons, meta_out))
 
-        self.model.apply(init_weights)
+        self.loss_fn.apply(init_weights)
 
         self.learning_rate = 3e-3
 
-
+    def forward(self, x):
+        return self.loss_fn(x)

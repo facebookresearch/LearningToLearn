@@ -51,7 +51,7 @@ if __name__ == '__main__':
     torch.manual_seed(0)
     np.random.seed(0)
 
-    n_outer_iter=1000
+    n_outer_iter = 1500
     num_task = 4
     n_inner_iter = 10
     batch_size = 64
@@ -75,8 +75,8 @@ if __name__ == '__main__':
         x = torch.Tensor(test_x)
         y = torch.Tensor(test_y)
 
-        ml3_loss.model.load_state_dict(torch.load(f"{EXP_FOLDER}/ml3_loss_shaped_sine_{str(shaped)}.pt"))
-        ml3_loss.model.eval()
+        ml3_loss.load_state_dict(torch.load(f"{EXP_FOLDER}/ml3_loss_shaped_sine_{str(shaped)}.pt"))
+        ml3_loss.eval()
         opt_iter = 1
         args = (torch.Tensor(test_x),torch.Tensor(test_y))
         test_ml3_loss(sine_model, ml3_loss,opt_iter,*args)

@@ -31,8 +31,8 @@ def generate_sinusoid_batch(num_tasks, num_examples_task, num_steps, random_step
 '''PLOTTING THE LOSS LANDSCAPES FOR ILLUSTRATION'''
 def plot_loss(extra, exp_folder, freq=0.5):
     meta = MetaNetwork()
-    meta.model.load_state_dict(torch.load(f'{exp_folder}/ml3_loss_shaped_sine_'+str(extra)+'.pt'))
-    meta.model.eval()
+    meta.load_state_dict(torch.load(f'{exp_folder}/ml3_loss_shaped_sine_'+str(extra)+'.pt'))
+    meta.eval()
 
     loss_landscape = []
 
@@ -54,8 +54,8 @@ def plot_loss(extra, exp_folder, freq=0.5):
         pi = ShapedSineModel(theta)
         policy_theta = torch.Tensor(np.zeros_like(test_y)) + pi.freq
         pi_out = pi(x)
-        meta_input = torch.cat((torch.cat((x, pi_out), 1), y), 1)
-        loss = meta.model(meta_input).mean()
+        meta_input = torch.cat([x, pi_out, y], 1)
+        loss = meta(meta_input).mean()
         meta_loss_landscape.append(loss.clone().mean().detach().numpy())
 
     return theta_ranges, np.array(meta_loss_landscape), np.array(loss_landscape)

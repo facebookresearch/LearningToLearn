@@ -11,8 +11,8 @@ def meta_train_mountain_car(policy,ml3_loss,task_loss_fn,s_0,goal,goal_extra,n_o
     goal = torch.Tensor(goal)
     goal_extra = torch.Tensor(goal_extra)
 
-    inner_opt = torch.optim.SGD(policy.policy.parameters(), lr=policy.learning_rate)
-    meta_opt = torch.optim.Adam(ml3_loss.model.parameters(), lr=ml3_loss.learning_rate)
+    inner_opt = torch.optim.SGD(policy.parameters(), lr=policy.learning_rate)
+    meta_opt = torch.optim.Adam(ml3_loss.parameters(), lr=ml3_loss.learning_rate)
 
     for outer_i in range(n_outer_iter):
         # set gradient with respect to meta loss parameters to 0
@@ -21,22 +21,23 @@ def meta_train_mountain_car(policy,ml3_loss,task_loss_fn,s_0,goal,goal_extra,n_o
             inner_opt.zero_grad()
             with higher.innerloop_ctx(policy, inner_opt, copy_initial_weights=False) as (fpolicy, diffopt):
                 # use current meta loss to update model
-                s_tr, a_tr, g_tr  = fpolicy.roll_out(s_0,goal,time_horizon)
+                s_tr, a_tr, g_tr = fpolicy.roll_out(s_0, goal, time_horizon)
 
-                pred_task_loss = ml3_loss.model(torch.cat((torch.cat((s_tr[:-1], a_tr), dim=1), g_tr), dim=1)).mean()
+                loss_input = torch.cat([s_tr[:-1], a_tr, g_tr], dim=1)
+                pred_task_loss = ml3_loss(loss_input).mean()
                 diffopt.step(pred_task_loss)
 
             # compute task loss
-            s, a, g = fpolicy.roll_out(s_0,goal,time_horizon)
-            task_loss = task_loss_fn(a,s[:], goal,goal_extra,shaped_loss)
+            s, a, g = fpolicy.roll_out(s_0, goal, time_horizon)
+            task_loss = task_loss_fn(a, s[:], goal, goal_extra, shaped_loss)
             # backprop grad wrt to task loss
             task_loss.backward()
 
         meta_opt.step()
 
-        if outer_i%100==0:
-            print("meta iter: {} loss: {}".format(outer_i,task_loss.item()))
-            print('last state',s[-1])
+        if outer_i % 100 == 0:
+            print("meta iter: {} loss: {}".format(outer_i, task_loss.item()))
+            print('last state', s[-1])
 
 
 def meta_train_mbrl_reacher(policy, ml3_loss, dmodel, env, task_loss_fn, goals, n_outer_iter, n_inner_iter, time_horizon, exp_folder):
@@ -57,7 +58,7 @@ def meta_train_mbrl_reacher(policy, ml3_loss, dmodel, env, task_loss_fn, goals, 
                 with higher.innerloop_ctx(policy, inner_opt, copy_initial_weights=False) as (fpolicy, diffopt):
                     # use current meta loss to update model
                     s_tr, a_tr, g_tr = fpolicy.roll_out(goal, time_horizon, dmodel, env)
-                    meta_input = torch.cat((torch.cat((s_tr[:-1].detach(),a_tr),dim=1), g_tr.detach()),dim=1)
+                    meta_input = torch.cat([s_tr[:-1].detach(), a_tr, g_tr.detach()], dim=1)
                     pred_task_loss = ml3_loss(meta_input).mean()
                     diffopt.step(pred_task_loss)
                     # compute task loss
@@ -87,7 +88,7 @@ def meta_train_shaped_sine(n_outer_iter,shaped,num_task,n_inner_iter,sine_model,
     landscape_with_extra = []
     landscape_mse = []
 
-    meta_opt = torch.optim.Adam(ml3_loss.policy_params.parameters(), lr=ml3_loss.learning_rate)
+    meta_opt = torch.optim.Adam(ml3_loss.parameters(), lr=ml3_loss.learning_rate)
 
     for outer_i in range(n_outer_iter):
         # set gradient with respect to meta loss parameters to 0
@@ -100,14 +101,13 @@ def meta_train_shaped_sine(n_outer_iter,shaped,num_task,n_inner_iter,sine_model,
                 labels = torch.Tensor(batch_labels[task, step, :])
                 label_thetas = torch.Tensor(batch_thetas[task, step, :])
 
-                ''' Updating the frequency parameters, taking gradien of theta wrt meta loss '''
-
+                ''' Updating the frequency parameters, taking gradient of theta wrt meta loss '''
                 with higher.innerloop_ctx(sine_model, inner_opt) as (fmodel, diffopt):
                     # use current meta loss to update model
                     yp = fmodel(inputs)
-                    meta_input = torch.cat((torch.cat((inputs, yp), 1), labels), 1)
+                    meta_input = torch.cat([inputs, yp, labels], dim=1)
 
-                    meta_out = ml3_loss.policy_params(meta_input)
+                    meta_out = ml3_loss(meta_input)
                     loss = meta_out.mean()
                     diffopt.step(loss)
 
@@ -117,16 +117,15 @@ def meta_train_shaped_sine(n_outer_iter,shaped,num_task,n_inner_iter,sine_model,
                 sine_model.freq = torch.nn.Parameter(fmodel.freq.clone().detach())
                 inner_opt = torch.optim.SGD([sine_model.freq], lr=sine_model.learning_rate)
 
-                ''' updating the meta network '''
-                ml3_loss.policy_params.zero_grad()
+                ''' updating the learned loss '''
                 meta_opt.zero_grad()
                 task_loss.mean().backward()
                 meta_opt.step()
 
-        if outer_i%100==0:
+        if outer_i % 100 == 0:
             print("task loss: {}".format(task_loss.mean().item()))
 
-        torch.save(ml3_loss.policy_params.state_dict(), f'{exp_folder}/ml3_loss_shaped_sine_' + str(shaped) + '.pt')
+        torch.save(ml3_loss.state_dict(), f'{exp_folder}/ml3_loss_shaped_sine_' + str(shaped) + '.pt')
 
         if outer_i%10==0:
             t_range, l_with_extra, l_mse = plot_loss(shaped, exp_folder)

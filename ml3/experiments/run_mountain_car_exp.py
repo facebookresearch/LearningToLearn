@@ -51,22 +51,22 @@ if __name__ == '__main__':
         shaped_loss = sys.argv[2] == 'True'
         meta_train(policy, ml3_loss, task_loss, s_0, goal, goal_extra, n_outer_iter, n_inner_iter, time_horizon, shaped_loss)
         if shaped_loss:
-            torch.save(ml3_loss.model.state_dict(), f"{EXP_FOLDER}/shaped_ml3_loss_mountain_car.pt")
+            torch.save(ml3_loss.state_dict(), f"{EXP_FOLDER}/shaped_ml3_loss_mountain_car.pt")
         else:
-            torch.save(ml3_loss.model.state_dict(), f"{EXP_FOLDER}/ml3_loss_mountain_car.pt")
+            torch.save(ml3_loss.state_dict(), f"{EXP_FOLDER}/ml3_loss_mountain_car.pt")
 
     if sys.argv[1] == 'test':
         shaped_loss = sys.argv[2] == 'True'
         if shaped_loss:
-            ml3_loss.model.load_state_dict(torch.load(f"{EXP_FOLDER}/shaped_ml3_loss_mountain_car.pt"))
+            ml3_loss.load_state_dict(torch.load(f"{EXP_FOLDER}/shaped_ml3_loss_mountain_car.pt"))
         else:
-            ml3_loss.model.load_state_dict(torch.load(f"{EXP_FOLDER}/ml3_loss_mountain_car.pt"))
-        ml3_loss.model.eval()
+            ml3_loss.load_state_dict(torch.load(f"{EXP_FOLDER}/ml3_loss_mountain_car.pt"))
+        ml3_loss.eval()
         opt_iter = 2
         args = (torch.Tensor(s_0), torch.Tensor(goal), time_horizon)
-        states = test_ml3_loss(policy,ml3_loss, opt_iter,*args)
+        states = test_ml3_loss(policy, ml3_loss, opt_iter, *args)
         if shaped_loss:
-            np.save(f"{EXP_FOLDER}/shaped_ml3_mc_states.npy",states)
+            np.save(f"{EXP_FOLDER}/shaped_ml3_mc_states.npy", states)
         else:
             np.save(f"{EXP_FOLDER}/ml3_mc_states.npy", states)
 

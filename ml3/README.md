@@ -4,7 +4,7 @@
 To reproduce results of the ML3 paper follow the instructions.
 All loss models are stored in 'experiments/data, all plots are stored in ./plots
 
-#### Loss Learning for Regression (ML3 paper experiment section 4.1.1)
+#### Loss Learning for Regression (ML3 paper experiment section IV.A.1)
 For meta learning the loss run
 
 ```
@@ -13,7 +13,7 @@ python experiments/run_sine_regression_exp.py
 
 For visualizing the results run `jupyter notebook` and open `ml3_sine_regression_exp_viz`
 
-#### Reward Learning for Model-based RL (MBRL) Reacher
+#### Reward Learning for Model-based RL (MBRL) Reacher (ML3 section IV.A.2)
 For meta learning the reward, run
 
 ```
@@ -26,7 +26,7 @@ For testing the reward, run
 python experiments/run_mbrl_reacher_exp.py test
 ```
 
-#### Learning with extra information at meta-train time
+#### Learning with extra information at meta-train time (ML3 section IV.B)
 The following scripts require two arguments, first one is `train\test`, the 2nd one 
 indicates whether to use extra information by setting `True\False` (with\without extra info)
 

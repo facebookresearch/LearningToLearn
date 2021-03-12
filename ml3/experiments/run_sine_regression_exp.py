@@ -1,3 +1,5 @@
+# Copyright (c) Facebook, Inc. and its affiliates.
+
 import os
 import ml3
 from ml3.sine_regression_task import main as meta_train

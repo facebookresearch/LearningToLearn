@@ -1,7 +1,7 @@
 # LearningToLearn
 This repository contains code for 
-* ML3: Meta-Learning via Learned Losses ([pdf](https://arxiv.org/pdf/1906.05374.pdf))
-* MBIRL: Model-Based Inverse Reinforcement Learning from Visual Demonstrations ([pdf](https://arxiv.org/pdf/2010.09034.pdf))
+* ML3: Meta-Learning via Learned Losses, presented at ICPR 2020, *won best student award* ([pdf](https://arxiv.org/pdf/1906.05374.pdf))
+* MBIRL: Model-Based Inverse Reinforcement Learning from Visual Demonstrations, presented at CoRL 2020 ([pdf](https://arxiv.org/pdf/2010.09034.pdf))
 
 ## Setup
 In the LearningToLearn folder, run:

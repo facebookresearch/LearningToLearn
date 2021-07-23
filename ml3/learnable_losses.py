@@ -102,3 +102,29 @@ class Ml3_loss_shaped_sine(nn.Module):
 
     def forward(self, x):
         return self.loss_fn(x)
+
+
+
+class MnistLearnedLoss(nn.Module):
+    def __init__(self, in_dim, hidden_dim):
+        super(MnistLearnedLoss, self).__init__()
+        net_dim = [in_dim] + hidden_dim
+
+        layers = []
+
+        for i in range(1, len(net_dim)):
+            layers.append(nn.Linear(net_dim[i - 1], net_dim[i]))
+            layers.append(nn.ReLU())
+        self.layers = nn.Sequential(*layers)
+
+        self.loss = nn.Sequential(nn.Linear(hidden_dim[-1], 1, bias=False), nn.Softplus())
+        self.reset()
+
+    def forward(self, y_in, y_target):
+        y = torch.cat((y_in, y_target), dim=1)
+        yp = self.layers(y)
+        return self.loss(yp).mean()
+
+    def reset(self):
+        self.layers.apply(weight_init)
+        self.loss.apply(weight_init)

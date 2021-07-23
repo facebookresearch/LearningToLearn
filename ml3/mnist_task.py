@@ -28,10 +28,11 @@ def regular_train(loss_fn, eval_loss_fn, task_model, task_sampler, exp_cfg):
         batch_spt = task_sampler.get_next_batch()
         x_tr = batch_spt['x']
         y_tr = batch_spt['y']
+        y_1hot_tr = batch_spt['y_1hot']
 
         optimizer.zero_grad()
         y_pred = task_model(x_tr)
-        loss = loss_fn(y_pred, y_tr)
+        loss = loss_fn(y_pred, y_1hot_tr)
 
         loss.backward()
         optimizer.step()
@@ -89,9 +90,6 @@ def meta_train(meta_loss_model, meta_optimizer, meta_objective,
 
             meta_optimizer.step()
 
-                # params = [p.detach().requires_grad_() for p in fmodel.parameters()]  # detach params from previous timesteps but ensure they require gradient
-                # fmodel.fast_params = params  # update implicit fast weights tracked by the model to use those new params
-
         avg_qry_loss = sum(qry_losses) / num_tasks
         if outer_i % 10 == 0:
             res_train_eval_reg = eval(task_sampler_lst=task_sampler_train_eval, exp_cfg=exp_cfg,
@@ -138,7 +136,7 @@ def eval(task_sampler_lst, exp_cfg, train_loss_fn, eval_loss_fn):
 
         task_model_test = LeNet(n_classes=2)
         loss, acc = regular_train(loss_fn=train_loss_fn, eval_loss_fn=eval_loss_fn, task_model=task_model_test,
-                              task_sampler=task_sampler, exp_cfg=exp_cfg)
+                                  task_sampler=task_sampler, exp_cfg=exp_cfg)
         accs.append(acc)
         loss_traces.append(loss)
 
@@ -161,9 +159,10 @@ def main(exp_cfg):
 
     meta_optimizer = torch.optim.Adam(meta_loss_model.parameters(), lr=outer_lr)
 
-    meta_objective = nn.NLLLoss()# nn.BCEWithLogitsLoss()# nn.BCELoss() #nn.CrossEntropyLoss()
+    meta_objective = nn.NLLLoss()
 
-    task_sampler_train = MnistClassPair(pos_class=posc_tr, neg_class=negc_tr, batch_size=1, shard_name='train',seed=seed, data_dir='mnist_data')
+    task_sampler_train = MnistClassPair(pos_class=posc_tr, neg_class=negc_tr, batch_size=1, shard_name='train',
+                                        seed=seed, data_dir='mnist_data')
     task_sampler_train_eval = []
     task_sampler_train_eval.append(MnistClassPair(pos_class=posc_tr, neg_class=negc_tr, batch_size=64,
                                                   shard_name='train',seed=seed, data_dir='mnist_data'))
@@ -172,8 +171,8 @@ def main(exp_cfg):
     for i in range(4):
         posc_te = exp_cfg['test_pos_classes'][i]
         negc_te = exp_cfg['test_neg_classes'][i]
-        test_task  = MnistClassPair(pos_class=posc_te, neg_class=negc_te, batch_size=batch_size,
-                                    shard_name='train',seed=seed, data_dir='mnist_data')
+        test_task = MnistClassPair(pos_class=posc_te, neg_class=negc_te, batch_size=batch_size,
+                                   shard_name='train',seed=seed, data_dir='mnist_data')
 
         task_sampler_test_eval.append(test_task)
 

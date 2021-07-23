@@ -37,7 +37,7 @@ class GroundTruthKeypointMPCWrapper(torch.nn.Module):
         key_pos.append(keypts)
         for t in range(self.time_horizon):
             ac = self.action_seq[t]
-            joint_state, keypts = self.forward(joint_state.detach(), ac)
+            joint_state, keypts = self.forward(joint_state, ac)
             tl = torch.Tensor(joint_limits)
             joint_state = torch.where(joint_state > tl, tl, joint_state)
             joint_state = torch.where(joint_state < -tl, -tl, joint_state)
